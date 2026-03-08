@@ -1,4 +1,4 @@
-import { PaymentStatus, Role } from '@prisma/client'
+import { Role } from '@/lib/prisma-enums'
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getSessionUser } from '@/lib/session'
@@ -16,10 +16,10 @@ export async function GET() {
     const [usersCount, verifiedSuppliers, pendingPayments, todayPaid] = await Promise.all([
       prisma.user.count(),
       prisma.supplier.count({ where: { verified: true } }),
-      prisma.payment.count({ where: { status: PaymentStatus.PENDING } }),
+      prisma.payment.count({ where: { status: 'PENDING' } }),
       prisma.payment.aggregate({
         where: {
-          status: PaymentStatus.PAID,
+          status: 'PAID',
           paidAt: { gte: startOfDay },
         },
         _sum: { amount: true },

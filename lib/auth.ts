@@ -1,6 +1,6 @@
 import bcrypt from 'bcryptjs'
 import jwt, { type JwtPayload } from 'jsonwebtoken'
-import { Role } from '@prisma/client'
+import { Role } from '@/lib/prisma-enums'
 
 const TOKEN_ISSUER = 'trade-platform'
 const TOKEN_AUDIENCE = 'trade-users'

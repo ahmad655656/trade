@@ -1,6 +1,6 @@
 ﻿'use client'
 
-import { ProductStatus } from '@prisma/client'
+import { ProductStatus } from '@/lib/prisma-enums'
 import { useEffect, useState } from 'react'
 import { useUi } from '@/components/providers/UiProvider'
 import { formatSypAmount } from '@/lib/currency'
@@ -73,3 +73,5 @@ export default function ProductsPage() {
     </section>
   )
 }
+
+

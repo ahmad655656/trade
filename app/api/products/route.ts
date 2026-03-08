@@ -1,4 +1,5 @@
-﻿import { Prisma, ProductStatus } from '@prisma/client'
+﻿import { Prisma } from '@prisma/client'
+import { ProductStatus } from '@/lib/prisma-enums'
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getSessionUser } from '@/lib/session'
@@ -166,3 +167,5 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: false, error: 'Failed to create product' }, { status: 500 })
   }
 }
+
+

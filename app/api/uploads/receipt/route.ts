@@ -2,7 +2,7 @@ import { randomUUID } from 'crypto'
 import { mkdir, writeFile } from 'fs/promises'
 import path from 'path'
 import { NextResponse } from 'next/server'
-import { Role } from '@prisma/client'
+import { Role } from '@/lib/prisma-enums'
 import { getSessionUser } from '@/lib/session'
 import { getRequestLanguage, i18nText } from '@/lib/request-language'
 
@@ -51,3 +51,4 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: false, error: 'Failed to upload receipt image' }, { status: 500 })
   }
 }
+

@@ -1,5 +1,5 @@
 ﻿import { NextResponse } from 'next/server'
-import { NotificationType, PaymentMethod, PaymentStatus, ProductStatus, Role } from '@prisma/client'
+import { NotificationType, PaymentMethod, ProductStatus, Role } from '@/lib/prisma-enums'
 import { prisma } from '@/lib/prisma'
 import { notifyAdmins, notifyUsers } from '@/lib/notifications'
 import { getSessionUser } from '@/lib/session'
@@ -90,7 +90,7 @@ export async function POST(request: Request) {
           tax,
           discount,
           status: 'PENDING',
-          paymentStatus: PaymentStatus.PENDING,
+          paymentStatus: 'PENDING',
           shippingStatus: 'PENDING',
           paymentMethod: 'BANK_TRANSFER',
           items: {
@@ -109,7 +109,7 @@ export async function POST(request: Request) {
               amount: totalAmount,
               platformFee: 0,
               supplierAmount: totalAmount,
-              status: PaymentStatus.PENDING,
+              status: 'PENDING',
               method: PaymentMethod.BANK_TRANSFER,
               refundReason: JSON.stringify(manualPaymentPayload),
             },
@@ -179,3 +179,5 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: false, error: 'Failed to checkout' }, { status: 500 })
   }
 }
+
+

@@ -1,4 +1,4 @@
-﻿import { Role } from '@prisma/client'
+﻿import { Role } from '@/lib/prisma-enums'
 import DashboardShell from '@/components/dashboard/DashboardShell'
 import { requireRole } from '@/lib/session'
 
@@ -26,3 +26,5 @@ export default async function SupplierLayout({ children }: { children: React.Rea
     </DashboardShell>
   )
 }
+
+

@@ -1,4 +1,4 @@
-import { PaymentStatus, Role } from '@prisma/client'
+import { Role } from '@/lib/prisma-enums'
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getSessionUser } from '@/lib/session'
@@ -29,7 +29,7 @@ export async function GET() {
       prisma.orderItem.findMany({
         where: {
           supplierId,
-          order: { paymentStatus: PaymentStatus.PAID },
+          order: { paymentStatus: 'PAID' },
         },
         include: {
           order: { select: { id: true, orderNumber: true, createdAt: true, status: true, trader: { include: { user: { select: { name: true } } } } } },
@@ -39,14 +39,14 @@ export async function GET() {
       prisma.orderItem.findMany({
         where: {
           supplierId,
-          order: { paymentStatus: PaymentStatus.PAID, createdAt: { gte: thirtyDaysAgo } },
+          order: { paymentStatus: 'PAID', createdAt: { gte: thirtyDaysAgo } },
         },
         select: { total: true },
       }),
       prisma.orderItem.findMany({
         where: {
           supplierId,
-          order: { paymentStatus: PaymentStatus.PAID, createdAt: { gte: prevThirtyStart, lte: prevThirtyEnd } },
+          order: { paymentStatus: 'PAID', createdAt: { gte: prevThirtyStart, lte: prevThirtyEnd } },
         },
         select: { total: true },
       }),
@@ -76,7 +76,7 @@ export async function GET() {
       prisma.order.findMany({
         where: {
           items: { some: { supplierId } },
-          paymentStatus: PaymentStatus.PAID,
+          paymentStatus: 'PAID',
         },
         orderBy: { createdAt: 'desc' },
         take: 5,

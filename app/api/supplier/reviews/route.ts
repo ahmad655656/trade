@@ -1,4 +1,4 @@
-import { Role } from '@prisma/client'
+import { Role } from '@/lib/prisma-enums'
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getSessionUser } from '@/lib/session'
@@ -25,4 +25,5 @@ export async function GET() {
     return NextResponse.json({ success: false, error: 'Failed to load supplier reviews' }, { status: 500 })
   }
 }
+
 

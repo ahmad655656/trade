@@ -1,6 +1,6 @@
 ﻿'use client'
 
-import { ProductStatus } from '@prisma/client'
+import { ProductStatus } from '@/lib/prisma-enums'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import toast from 'react-hot-toast'
 import SupplierPageHeader from '@/components/supplier/SupplierPageHeader'
@@ -426,3 +426,5 @@ function Field({
     </div>
   )
 }
+
+

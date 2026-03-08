@@ -1,4 +1,4 @@
-import { AddressType, Role } from '@prisma/client'
+import { AddressType, Role } from '@/lib/prisma-enums'
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getRequestLanguage, i18nText } from '@/lib/request-language'
@@ -159,3 +159,4 @@ export async function DELETE(request: Request, { params }: Params) {
     return NextResponse.json({ success: false, error: 'Failed to delete address' }, { status: 500 })
   }
 }
+

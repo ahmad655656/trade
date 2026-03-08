@@ -1,4 +1,4 @@
-import { Role } from '@prisma/client'
+import { Role } from '@/lib/prisma-enums'
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getRequestLanguage, i18nText } from '@/lib/request-language'
@@ -64,3 +64,4 @@ export async function GET(request: Request, { params }: Params) {
     return NextResponse.json({ success: false, error: 'Failed to get payment details' }, { status: 500 })
   }
 }
+

@@ -1,6 +1,6 @@
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
-import { Role, UserStatus } from '@prisma/client'
+import { Role, UserStatus } from '@/lib/prisma-enums'
 import { verifyToken } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 

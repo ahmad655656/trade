@@ -1,5 +1,5 @@
-﻿import { NextResponse } from 'next/server'
-import { ProductStatus, Role } from '@prisma/client'
+import { NextResponse } from 'next/server'
+import { ProductStatus, Role } from '@/lib/prisma-enums'
 import { prisma } from '@/lib/prisma'
 import { getSessionUser } from '@/lib/session'
 import { recalculateCartTotals } from '@/lib/cart'
@@ -132,3 +132,4 @@ export async function DELETE() {
     return NextResponse.json({ success: false, error: 'Failed to clear cart' }, { status: 500 })
   }
 }
+

@@ -1,6 +1,6 @@
 ﻿'use client'
 
-import { AddressType } from '@prisma/client'
+import { AddressType } from '@/lib/prisma-enums'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import toast from 'react-hot-toast'
 import { useUi } from '@/components/providers/UiProvider'
@@ -274,4 +274,6 @@ export default function TraderAddressesPage() {
     </section>
   )
 }
+
+
 

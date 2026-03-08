@@ -1,5 +1,5 @@
-﻿import { NextResponse } from 'next/server'
-import { Role } from '@prisma/client'
+import { NextResponse } from 'next/server'
+import { Role } from '@/lib/prisma-enums'
 import { prisma } from '@/lib/prisma'
 import { getSessionUser } from '@/lib/session'
 
@@ -85,3 +85,4 @@ export async function DELETE(request: Request) {
     return NextResponse.json({ success: false, error: 'Failed to remove wishlist' }, { status: 500 })
   }
 }
+

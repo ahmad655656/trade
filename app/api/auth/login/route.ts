@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
-import { UserStatus } from '@prisma/client'
+import { UserStatus } from '@/lib/prisma-enums'
 import { prisma } from '@/lib/prisma'
 import { comparePassword, generateToken } from '@/lib/auth'
 import { loginSchema } from '@/lib/validation'
@@ -74,3 +74,4 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: false, error: 'Login failed due to a server error' }, { status: 500 })
   }
 }
+

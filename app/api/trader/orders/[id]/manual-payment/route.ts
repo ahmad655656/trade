@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { NotificationType, Role } from '@prisma/client'
+import { NotificationType, Role } from '@/lib/prisma-enums'
 import { prisma } from '@/lib/prisma'
 import { notifyAdmins, notifyUsers } from '@/lib/notifications'
 import { getSessionUser } from '@/lib/session'
@@ -106,3 +106,4 @@ export async function PATCH(request: Request, { params }: Params) {
     return NextResponse.json({ success: false, error: 'Failed to submit manual payment details' }, { status: 500 })
   }
 }
+

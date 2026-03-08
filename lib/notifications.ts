@@ -1,4 +1,4 @@
-﻿import { NotificationType } from '@prisma/client'
+import { NotificationType } from '@/lib/prisma-enums'
 import { prisma } from '@/lib/prisma'
 
 export async function notifyUsers(params: {
@@ -41,3 +41,4 @@ export async function notifyAdmins(params: {
     data: params.data,
   })
 }
+

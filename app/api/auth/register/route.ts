@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
-import { Role, UserStatus } from '@prisma/client'
+import { Role, UserStatus } from '@/lib/prisma-enums'
 import { prisma } from '@/lib/prisma'
 import { generateToken, hashPassword } from '@/lib/auth'
 import { registerSchema } from '@/lib/validation'
@@ -100,5 +100,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: false, error: 'Registration failed due to a server error' }, { status: 500 })
   }
 }
+
 
 

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { Role } from '@prisma/client'
+import { Role } from '@/lib/prisma-enums'
 import { prisma } from '@/lib/prisma'
 import { getSessionUser } from '@/lib/session'
 import { recalculateCartTotals } from '@/lib/cart'
@@ -70,3 +70,4 @@ export async function DELETE(_: Request, { params }: Params) {
     return NextResponse.json({ success: false, error: 'Failed to remove cart item' }, { status: 500 })
   }
 }
+

@@ -1,4 +1,4 @@
-import { AddressType, Role } from '@prisma/client'
+import { AddressType, Role } from '@/lib/prisma-enums'
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getRequestLanguage, i18nText } from '@/lib/request-language'
@@ -113,3 +113,4 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: false, error: 'Failed to create address' }, { status: 500 })
   }
 }
+

@@ -1,4 +1,4 @@
-import { PaymentStatus, Role } from '@prisma/client'
+import { Role } from '@/lib/prisma-enums'
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getRequestLanguage, i18nText } from '@/lib/request-language'
@@ -17,6 +17,13 @@ function parseManualPayload(raw: string | null) {
   } catch {
     return null
   }
+}
+
+const PAYMENT_STATUSES = ['PENDING', 'PAID', 'FAILED', 'REFUNDED', 'PARTIALLY_REFUNDED'] as const
+type PaymentStatusValue = (typeof PAYMENT_STATUSES)[number]
+
+function isPaymentStatus(value: string): value is PaymentStatusValue {
+  return PAYMENT_STATUSES.includes(value as PaymentStatusValue)
 }
 
 export async function GET(request: Request) {
@@ -38,7 +45,7 @@ export async function GET(request: Request) {
 
     const payments = await prisma.payment.findMany({
       where: {
-        ...(statusParam ? { status: statusParam as PaymentStatus } : {}),
+        ...(statusParam && isPaymentStatus(statusParam) ? { status: statusParam } : {}),
         ...(Number.isFinite(minAmount) ? { amount: { gte: minAmount } } : {}),
         ...(Number.isFinite(maxAmount) ? { amount: { lte: maxAmount } } : {}),
         ...(from || to
@@ -97,3 +104,4 @@ export async function GET(request: Request) {
     return NextResponse.json({ success: false, error: 'Failed to list payments' }, { status: 500 })
   }
 }
+

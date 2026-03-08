@@ -1,4 +1,4 @@
-﻿import { Role } from '@prisma/client'
+﻿import { Role } from '@/lib/prisma-enums'
 import DashboardShell from '@/components/dashboard/DashboardShell'
 import { requireRole } from '@/lib/session'
 
@@ -28,3 +28,5 @@ export default async function TraderLayout({ children }: { children: React.React
     </DashboardShell>
   )
 }
+
+

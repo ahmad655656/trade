@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { OrderStatus, PaymentStatus, Role } from '@prisma/client'
+import { OrderStatus, Role } from '@/lib/prisma-enums'
 import { prisma } from '@/lib/prisma'
 import { notifyUsers } from '@/lib/notifications'
 import { getSessionUser } from '@/lib/session'
@@ -70,7 +70,7 @@ export async function PATCH(request: Request, { params }: Params) {
         const payment = await tx.payment.update({
           where: { orderId: order.id },
           data: {
-            status: PaymentStatus.PAID,
+            status: 'PAID',
             transactionId: null,
             paidAt: new Date(),
           },
@@ -79,7 +79,7 @@ export async function PATCH(request: Request, { params }: Params) {
         const updatedOrder = await tx.order.update({
           where: { id: order.id },
           data: {
-            paymentStatus: PaymentStatus.PAID,
+            paymentStatus: 'PAID',
             status: OrderStatus.CONFIRMED,
             transactionId: null,
             confirmedAt: new Date(),
@@ -111,7 +111,7 @@ export async function PATCH(request: Request, { params }: Params) {
       await tx.payment.update({
         where: { orderId: order.id },
         data: {
-          status: PaymentStatus.FAILED,
+          status: 'FAILED',
           transactionId: null,
         },
       })
@@ -119,7 +119,7 @@ export async function PATCH(request: Request, { params }: Params) {
       return tx.order.update({
         where: { id: order.id },
         data: {
-          paymentStatus: PaymentStatus.FAILED,
+          paymentStatus: 'FAILED',
           status: OrderStatus.CANCELLED,
           cancelledAt: new Date(),
           cancelledReason: body.notes || 'Manual payment not received',
@@ -148,3 +148,4 @@ export async function PATCH(request: Request, { params }: Params) {
     return NextResponse.json({ success: false, error: 'Failed to verify manual payment' }, { status: 500 })
   }
 }
+

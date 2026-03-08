@@ -1,5 +1,5 @@
 ﻿import { NextResponse } from 'next/server'
-import { PaymentMethod, PaymentStatus, ProductStatus, Role } from '@prisma/client'
+import { PaymentMethod, ProductStatus, Role } from '@/lib/prisma-enums'
 import { prisma } from '@/lib/prisma'
 import { notifyAdmins, notifyUsers } from '@/lib/notifications'
 import { getSessionUser } from '@/lib/session'
@@ -39,7 +39,7 @@ export async function GET() {
       const orders = await prisma.order.findMany({
         where: {
           items: { some: { supplierId: user.supplier.id } },
-          paymentStatus: PaymentStatus.PAID,
+          paymentStatus: 'PAID',
           status: { in: ['CONFIRMED', 'PROCESSING', 'SHIPPED', 'DELIVERED', 'COMPLETED'] },
         },
         orderBy: { createdAt: 'desc' },
@@ -126,7 +126,7 @@ export async function POST(request: Request) {
           shipping,
           discount,
           status: 'PENDING',
-          paymentStatus: PaymentStatus.PENDING,
+          paymentStatus: 'PENDING',
           shippingStatus: 'PENDING',
           paymentMethod: 'BANK_TRANSFER',
           items: {
@@ -147,7 +147,7 @@ export async function POST(request: Request) {
               amount: totalAmount,
               platformFee: 0,
               supplierAmount: totalAmount,
-              status: PaymentStatus.PENDING,
+              status: 'PENDING',
               method: PaymentMethod.BANK_TRANSFER,
             },
           },
@@ -197,3 +197,5 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: false, error: 'Failed to create order' }, { status: 500 })
   }
 }
+
+
