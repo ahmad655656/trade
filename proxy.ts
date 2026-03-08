@@ -22,7 +22,7 @@ function getRoleFromPayload(payload: unknown): string | null {
   return typeof role === 'string' ? role : null
 }
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
 
   if (isPublicPath(pathname) || pathname.startsWith('/api/auth')) {
