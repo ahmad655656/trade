@@ -1,26 +1,85 @@
-@import "tailwindcss";
+﻿@import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --app-bg: #f3f6fb;
+  --app-surface: #ffffff;
+  --app-border: #d8e0ef;
+  --app-text: #112039;
+  --app-muted: #5f6b82;
+  --app-primary: #0a66ff;
+  --app-primary-strong: #004fce;
+}
+
+html.dark {
+  --app-bg: #0b1220;
+  --app-surface: #121b2f;
+  --app-border: #26324b;
+  --app-text: #e8eefc;
+  --app-muted: #9fb0d4;
+  --app-primary: #4c8dff;
+  --app-primary-strong: #78a9ff;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --color-background: var(--app-bg);
+  --color-foreground: var(--app-text);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background:
+    radial-gradient(circle at 10% 10%, color-mix(in oklab, var(--app-primary) 14%, transparent) 0%, transparent 45%),
+    radial-gradient(circle at 85% 20%, color-mix(in oklab, var(--app-primary) 10%, transparent) 0%, transparent 40%),
+    var(--app-bg);
+  color: var(--app-text);
+  font-family: var(--font-arabic), var(--font-latin), sans-serif;
 }
+
+html[lang='en'] body {
+  font-family: var(--font-latin), var(--font-arabic), sans-serif;
+}
+
+.bg-app { background-color: var(--app-bg); }
+.bg-surface { background-color: var(--app-surface); }
+.text-app { color: var(--app-text); }
+.text-muted { color: var(--app-muted); }
+.border-app { border-color: var(--app-border); }
+
+.card-pro {
+  border: 1px solid var(--app-border);
+  background: color-mix(in oklab, var(--app-surface) 92%, transparent);
+  backdrop-filter: blur(6px);
+  border-radius: 16px;
+}
+
+.btn-primary {
+  @apply inline-flex items-center justify-center rounded-xl px-4 py-2 font-semibold text-white transition;
+  background: linear-gradient(135deg, var(--app-primary), var(--app-primary-strong));
+}
+
+.btn-primary:hover {
+  filter: brightness(1.05);
+}
+
+.btn-secondary {
+  @apply inline-flex items-center justify-center rounded-xl px-4 py-2 font-medium transition;
+  border: 1px solid var(--app-border);
+  color: var(--app-text);
+  background: color-mix(in oklab, var(--app-surface) 88%, transparent);
+}
+
+.btn-secondary:hover {
+  background: color-mix(in oklab, var(--app-surface) 78%, transparent);
+}
+
+.input-pro {
+  @apply w-full rounded-xl px-3 py-2 outline-none transition;
+  border: 1px solid var(--app-border);
+  background: color-mix(in oklab, var(--app-surface) 95%, transparent);
+  color: var(--app-text);
+}
+
+.input-pro:focus {
+  border-color: var(--app-primary);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--app-primary) 24%, transparent);
+}
+
