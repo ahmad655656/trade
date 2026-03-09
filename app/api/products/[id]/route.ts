@@ -2,11 +2,18 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getSessionUser } from '@/lib/session'
 import { productUpdateSchema } from '@/lib/validation'
+import { assertSameOrigin } from '@/lib/security'
+import { writeAuditLog } from '@/lib/audit'
 
 type Params = { params: Promise<{ id: string }> }
 
 export async function PATCH(request: Request, { params }: Params) {
   try {
+    const sameOriginError = assertSameOrigin(request)
+    if (sameOriginError) {
+      return NextResponse.json({ success: false, error: sameOriginError }, { status: 403 })
+    }
+
     const user = await getSessionUser()
     if (!user || user.role !== 'SUPPLIER' || !user.supplier) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
@@ -54,6 +61,15 @@ export async function PATCH(request: Request, { params }: Params) {
       },
     })
 
+    await writeAuditLog({
+      request,
+      actorUserId: user.id,
+      actorRole: user.role,
+      action: 'PRODUCT_UPDATED',
+      entityType: 'PRODUCT',
+      entityId: updated.id,
+    })
+
     return NextResponse.json({ success: true, data: updated, message: 'Product updated' })
   } catch (error) {
     console.error('Failed to update product:', error)
@@ -61,8 +77,13 @@ export async function PATCH(request: Request, { params }: Params) {
   }
 }
 
-export async function DELETE(_: Request, { params }: Params) {
+export async function DELETE(request: Request, { params }: Params) {
   try {
+    const sameOriginError = assertSameOrigin(request)
+    if (sameOriginError) {
+      return NextResponse.json({ success: false, error: sameOriginError }, { status: 403 })
+    }
+
     const user = await getSessionUser()
     if (!user || user.role !== 'SUPPLIER' || !user.supplier) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
@@ -76,6 +97,15 @@ export async function DELETE(_: Request, { params }: Params) {
     }
 
     await prisma.product.delete({ where: { id } })
+
+    await writeAuditLog({
+      request,
+      actorUserId: user.id,
+      actorRole: user.role,
+      action: 'PRODUCT_DELETED',
+      entityType: 'PRODUCT',
+      entityId: id,
+    })
     return NextResponse.json({ success: true, message: 'Product deleted' })
   } catch (error) {
     console.error('Failed to delete product:', error)

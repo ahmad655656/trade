@@ -95,9 +95,23 @@ export default function TraderOrdersPage() {
 
   const filtered = useMemo(() => {
     if (tab === 'ALL') return orders
-    if (tab === 'ACTIVE') return orders.filter((o) => ['PENDING', 'CONFIRMED', 'PROCESSING', 'SHIPPED'].includes(o.status))
-    if (tab === 'COMPLETED') return orders.filter((o) => ['DELIVERED', 'COMPLETED'].includes(o.status))
-    return orders.filter((o) => o.status === 'CANCELLED')
+    if (tab === 'ACTIVE')
+      return orders.filter((o) =>
+        [
+          'PENDING_PLATFORM_FEE_PAYMENT',
+          'WAITING_FOR_PAYMENT_VERIFICATION',
+          'PLATFORM_FEE_CONFIRMED',
+          'SUPPLIER_PREPARING_ORDER',
+          'SHIPPED',
+          'AWAITING_DELIVERY_CONFIRMATION',
+          'DISPUTE_OPENED',
+          'PENDING',
+          'CONFIRMED',
+          'PROCESSING',
+        ].includes(o.status),
+      )
+    if (tab === 'COMPLETED') return orders.filter((o) => ['DELIVERED', 'COMPLETED', 'ORDER_CLOSED'].includes(o.status))
+    return orders.filter((o) => ['CANCELLED', 'PAYMENT_REJECTED'].includes(o.status))
   }, [orders, tab])
 
   const selected = filtered.find((o) => o.id === selectedId) ?? filtered[0] ?? null
@@ -125,13 +139,21 @@ export default function TraderOrdersPage() {
   }, [selected, selectedManualPayment])
 
   const progressByStatus: Record<string, number> = {
+    PENDING_PLATFORM_FEE_PAYMENT: 10,
+    WAITING_FOR_PAYMENT_VERIFICATION: 20,
+    PLATFORM_FEE_CONFIRMED: 35,
+    SUPPLIER_PREPARING_ORDER: 55,
     PENDING: 10,
     CONFIRMED: 25,
     PROCESSING: 50,
     SHIPPED: 75,
-    DELIVERED: 100,
+    AWAITING_DELIVERY_CONFIRMATION: 90,
+    DELIVERED: 95,
+    ORDER_CLOSED: 100,
     COMPLETED: 100,
     CANCELLED: 100,
+    PAYMENT_REJECTED: 100,
+    DISPUTE_OPENED: 60,
   }
 
   return (
@@ -313,6 +335,101 @@ export default function TraderOrdersPage() {
                         : 'Submit payment details to admin'}
                   </button>
                 </div>
+              )}
+
+              {selected.status === 'AWAITING_DELIVERY_CONFIRMATION' && (
+                <button
+                  className="btn-primary !rounded-lg !px-3 !py-2 text-sm"
+                  onClick={async () => {
+                    if (!selected) return
+                    const response = await fetch(`/api/trader/orders/${selected.id}/confirm-delivery`, {
+                      method: 'POST',
+                      headers: { 'x-app-language': language },
+                    })
+                    const result = await response.json()
+                    if (!response.ok || !result.success) {
+                      alert(result.error || (language === 'ar' ? 'فشل تأكيد الاستلام' : 'Failed to confirm delivery'))
+                      return
+                    }
+                    window.location.reload()
+                  }}
+                >
+                  {language === 'ar' ? 'تأكيد الاستلام وإغلاق الطلب' : 'Confirm delivery & close order'}
+                </button>
+              )}
+
+              {['AWAITING_DELIVERY_CONFIRMATION', 'DELIVERED', 'ORDER_CLOSED'].includes(selected.status) && (
+                <button
+                  className="btn-secondary !rounded-lg !px-3 !py-2 text-sm"
+                  onClick={async () => {
+                    if (!selected) return
+                    const reasonPrompt = language === 'ar'
+                      ? window.prompt('سبب النزاع: 1) NOT_AS_DESCRIBED 2) DAMAGED_GOODS 3) MISSING_ITEMS')
+                      : window.prompt('Dispute reason: 1) NOT_AS_DESCRIBED 2) DAMAGED_GOODS 3) MISSING_ITEMS')
+                    const reason = reasonPrompt === '2' ? 'DAMAGED_GOODS' : reasonPrompt === '3' ? 'MISSING_ITEMS' : 'NOT_AS_DESCRIBED'
+                    const description = language === 'ar'
+                      ? window.prompt('اكتب وصف المشكلة')
+                      : window.prompt('Describe the issue')
+                    if (!description?.trim()) return
+                    const response = await fetch('/api/disputes', {
+                      method: 'POST',
+                      headers: {
+                        'Content-Type': 'application/json',
+                        'x-app-language': language,
+                      },
+                      body: JSON.stringify({
+                        orderId: selected.id,
+                        reason,
+                        description,
+                        images: selectedManualPayment?.receiptUrl ? [selectedManualPayment.receiptUrl] : [],
+                      }),
+                    })
+                    const result = await response.json()
+                    if (!response.ok || !result.success) {
+                      alert(result.error || (language === 'ar' ? 'فشل فتح النزاع' : 'Failed to open dispute'))
+                      return
+                    }
+                    window.location.reload()
+                  }}
+                >
+                  {language === 'ar' ? 'فتح نزاع' : 'Open dispute'}
+                </button>
+              )}
+
+              {selected.status === 'ORDER_CLOSED' && (
+                <button
+                  className="btn-secondary !rounded-lg !px-3 !py-2 text-sm"
+                  onClick={async () => {
+                    if (!selected) return
+                    const ratingInput = window.prompt(language === 'ar' ? 'التقييم من 1 إلى 5' : 'Rating from 1 to 5')
+                    const rating = Number(ratingInput)
+                    if (!Number.isFinite(rating) || rating < 1 || rating > 5) return
+                    const comment = window.prompt(language === 'ar' ? 'تعليق (اختياري)' : 'Comment (optional)') || ''
+                    const response = await fetch(`/api/trader/orders/${selected.id}/review`, {
+                      method: 'POST',
+                      headers: {
+                        'Content-Type': 'application/json',
+                        'x-app-language': language,
+                      },
+                      body: JSON.stringify({
+                        rating,
+                        qualityRating: rating,
+                        deliverySpeedRating: rating,
+                        descriptionAccuracyRating: rating,
+                        communicationRating: rating,
+                        comment,
+                      }),
+                    })
+                    const result = await response.json()
+                    if (!response.ok || !result.success) {
+                      alert(result.error || (language === 'ar' ? 'فشل إرسال التقييم' : 'Failed to submit review'))
+                      return
+                    }
+                    alert(language === 'ar' ? 'تم إرسال التقييم' : 'Review submitted')
+                  }}
+                >
+                  {language === 'ar' ? 'تقييم المورد' : 'Rate supplier'}
+                </button>
               )}
 
               {selectedManualPayment?.submittedAt && (

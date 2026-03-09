@@ -13,16 +13,29 @@ export async function GET() {
     const startOfDay = new Date()
     startOfDay.setHours(0, 0, 0, 0)
 
-    const [usersCount, verifiedSuppliers, pendingPayments, todayPaid] = await Promise.all([
+    const [usersCount, verifiedSuppliers, pendingPayments, todayRevenue, todayTransactionVolume, completedPayments] = await Promise.all([
       prisma.user.count(),
       prisma.supplier.count({ where: { verified: true } }),
-      prisma.payment.count({ where: { status: 'PENDING' } }),
+      prisma.payment.count({ where: { status: 'PENDING', purpose: 'PLATFORM_FEE' } }),
       prisma.payment.aggregate({
         where: {
           status: 'PAID',
+          purpose: 'PLATFORM_FEE',
           paidAt: { gte: startOfDay },
         },
         _sum: { amount: true },
+      }),
+      prisma.order.aggregate({
+        where: {
+          createdAt: { gte: startOfDay },
+        },
+        _sum: { totalAmount: true },
+      }),
+      prisma.payment.count({
+        where: {
+          status: 'PAID',
+          purpose: 'PLATFORM_FEE',
+        },
       }),
     ])
 
@@ -32,7 +45,11 @@ export async function GET() {
         usersCount,
         verifiedSuppliers,
         pendingPayments,
-        todayVolume: todayPaid._sum.amount ?? 0,
+        pendingCommissions: pendingPayments,
+        completedPayments,
+        dailyRevenue: todayRevenue._sum.amount ?? 0,
+        dailyTransactionVolume: todayTransactionVolume._sum.totalAmount ?? 0,
+        todayVolume: todayTransactionVolume._sum.totalAmount ?? 0,
       },
     })
   } catch (error) {

@@ -27,6 +27,7 @@ export const registerSchema = z
 export const loginSchema = z.object({
   email: z.string().trim().email('Please provide a valid email address'),
   password: z.string().min(1, 'Password is required'),
+  otp: z.string().trim().regex(/^\d{6}$/, 'OTP must be 6 digits').optional(),
 })
 
 export const productCreateSchema = z.object({
@@ -47,7 +48,79 @@ export const productCreateSchema = z.object({
 
 export const productUpdateSchema = productCreateSchema.partial()
 
+export const twoFactorVerifySchema = z.object({
+  otp: z.string().trim().regex(/^\d{6}$/, 'OTP must be 6 digits'),
+})
+
+export const kycSubmissionSchema = z.object({
+  phoneVerified: z.boolean().optional(),
+  addressVerified: z.boolean().optional(),
+  documents: z
+    .array(
+      z.object({
+        type: z.enum(['ID_DOCUMENT', 'BUSINESS_REGISTRATION', 'PHONE_PROOF', 'ADDRESS_PROOF']),
+        fileUrl: z.string().trim().min(1),
+      }),
+    )
+    .max(10)
+    .optional(),
+})
+
+export const disputeCreateSchema = z.object({
+  orderId: z.string().trim().min(1),
+  reason: z.enum(['NOT_AS_DESCRIBED', 'DAMAGED_GOODS', 'MISSING_ITEMS', 'OTHER']),
+  description: z.string().trim().min(10).max(4000),
+  images: z.array(z.string().trim()).max(10).optional(),
+})
+
+export const disputeMessageSchema = z.object({
+  message: z.string().trim().min(1).max(4000),
+  attachments: z.array(z.string().trim()).max(10).optional(),
+})
+
+export const rfqCreateSchema = z.object({
+  productRequest: z.string().trim().min(3).max(400),
+  quantity: z.number().int().min(1),
+  deliveryLocation: z.string().trim().min(3).max(200),
+  notes: z.string().trim().max(2000).optional(),
+  expiresAt: z.string().datetime().optional(),
+})
+
+export const rfqQuoteSchema = z.object({
+  price: z.number().positive(),
+  availableQuantity: z.number().int().min(1),
+  estimatedShippingDays: z.number().int().min(1).max(90),
+  notes: z.string().trim().max(2000).optional(),
+})
+
+export const orderReviewSchema = z.object({
+  rating: z.number().int().min(1).max(5),
+  qualityRating: z.number().int().min(1).max(5),
+  deliverySpeedRating: z.number().int().min(1).max(5),
+  descriptionAccuracyRating: z.number().int().min(1).max(5),
+  communicationRating: z.number().int().min(1).max(5),
+  title: z.string().trim().max(200).optional(),
+  comment: z.string().trim().max(4000).optional(),
+  images: z.array(z.string().trim()).max(10).optional(),
+})
+
+export const favoriteListCreateSchema = z.object({
+  name: z.string().trim().min(2).max(80),
+})
+
+export const favoriteListItemSchema = z
+  .object({
+    targetType: z.enum(['PRODUCT', 'SUPPLIER']),
+    productId: z.string().trim().optional(),
+    supplierId: z.string().trim().optional(),
+  })
+  .refine((value) => {
+    if (value.targetType === 'PRODUCT') return Boolean(value.productId)
+    return Boolean(value.supplierId)
+  }, 'Target ID is required for selected target type')
+
 export type RegisterInput = z.infer<typeof registerSchema>
 export type LoginInput = z.infer<typeof loginSchema>
 export type ProductCreateInput = z.infer<typeof productCreateSchema>
 export type ProductUpdateInput = z.infer<typeof productUpdateSchema>
+export type TwoFactorVerifyInput = z.infer<typeof twoFactorVerifySchema>

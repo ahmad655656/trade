@@ -78,7 +78,7 @@ export default function AdminPaymentsPage() {
     try {
       const notes =
         !approved && language === 'ar'
-          ? window.prompt('سبب رفض الدفع (اختياري)') ?? ''
+          ? window.prompt('سبب رفض عمولة المنصة (اختياري)') ?? ''
           : !approved
             ? window.prompt('Rejection reason (optional)') ?? ''
             : ''
@@ -98,11 +98,11 @@ export default function AdminPaymentsPage() {
       toast.success(
         approved
           ? language === 'ar'
-            ? 'تم اعتماد الدفع'
-            : 'Payment approved'
+            ? 'تم اعتماد عمولة المنصة'
+            : 'Platform fee approved'
           : language === 'ar'
-            ? 'تم رفض الدفع'
-            : 'Payment rejected',
+            ? 'تم رفض عمولة المنصة'
+            : 'Platform fee rejected',
       )
       await loadPayments()
     } catch (error) {
@@ -118,14 +118,14 @@ export default function AdminPaymentsPage() {
         <h2 className="text-xl font-semibold text-app">{language === 'ar' ? 'إدارة المدفوعات' : 'Payments management'}</h2>
         <p className="mt-2 text-muted">
           {language === 'ar'
-            ? 'مراجعة جميع المدفوعات اليدوية، معاينة الوصل، ثم اعتماد أو رفض الدفع.'
-            : 'Review manual payments, inspect receipt, then approve or reject.'}
+            ? 'مراجعة مدفوعات عمولة المنصة اليدوية، معاينة الوصل، ثم اعتماد أو رفض العملية.'
+            : 'Review manual platform-fee payments, inspect receipt, then approve or reject.'}
         </p>
       </div>
 
       <div className="grid gap-3 md:grid-cols-4">
         <article className="card-pro rounded-xl p-4">
-          <p className="text-xs text-muted">{language === 'ar' ? 'مدفوعات اليوم' : 'Today payments'}</p>
+          <p className="text-xs text-muted">{language === 'ar' ? 'عمولات اليوم' : 'Today commissions'}</p>
           <p className="mt-1 text-xl font-bold text-app">{formatSypAmount(stats.todayTotal, language)}</p>
         </article>
         <article className="card-pro rounded-xl p-4">

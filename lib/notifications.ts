@@ -1,5 +1,36 @@
 import { NotificationType } from '@/lib/prisma-enums'
 import { prisma } from '@/lib/prisma'
+import { isMissingColumnError } from '@/lib/prisma-errors'
+
+async function sendEmailNotification(params: {
+  toUserIds: string[]
+  subject: string
+  body: string
+}) {
+  if (!params.toUserIds.length) return
+
+  let users: Array<{ email: string }> = []
+  try {
+    users = await prisma.user.findMany({
+      where: {
+        id: { in: params.toUserIds },
+        emailNotifications: true,
+      },
+      select: { email: true },
+    })
+  } catch (error) {
+    if (!isMissingColumnError(error)) throw error
+    return
+  }
+
+  if (!users.length) return
+
+  // Placeholder hook for SMTP/provider integration.
+  console.log('Email notifications queued:', {
+    to: users.map((item) => item.email),
+    subject: params.subject,
+  })
+}
 
 export async function notifyUsers(params: {
   userIds: string[]
@@ -7,6 +38,7 @@ export async function notifyUsers(params: {
   title: string
   message?: string
   data?: unknown
+  sendEmail?: boolean
 }) {
   const ids = Array.from(new Set(params.userIds.filter(Boolean)))
   if (!ids.length) return
@@ -20,6 +52,14 @@ export async function notifyUsers(params: {
       data: params.data as object | undefined,
     })),
   })
+
+  if (params.sendEmail) {
+    await sendEmailNotification({
+      toUserIds: ids,
+      subject: params.title,
+      body: params.message ?? params.title,
+    })
+  }
 }
 
 export async function notifyAdmins(params: {

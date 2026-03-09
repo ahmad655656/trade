@@ -39,12 +39,14 @@ export default function TraderProductsCatalog() {
   const [search, setSearch] = useState('')
   const [minPrice, setMinPrice] = useState('')
   const [maxPrice, setMaxPrice] = useState('')
+  const [minOrderQuantity, setMinOrderQuantity] = useState('')
   const [supplierId, setSupplierId] = useState('')
   const [ratingMin, setRatingMin] = useState('')
   const [inStock, setInStock] = useState(true)
   const [sort, setSort] = useState('newest')
   const [categoryIds, setCategoryIds] = useState<string[]>([])
   const [addingId, setAddingId] = useState<string | null>(null)
+  const [suggestions, setSuggestions] = useState<string[]>([])
 
   const loadProducts = useCallback(async () => {
     setLoading(true)
@@ -55,6 +57,7 @@ export default function TraderProductsCatalog() {
       if (search.trim()) params.set('search', search.trim())
       if (minPrice.trim()) params.set('minPrice', minPrice)
       if (maxPrice.trim()) params.set('maxPrice', maxPrice)
+      if (minOrderQuantity.trim()) params.set('minOrderQuantity', minOrderQuantity)
       if (supplierId) params.set('supplierId', supplierId)
       if (categoryIds.length) params.set('categoryIds', categoryIds.join(','))
       if (ratingMin.trim()) params.set('ratingMin', ratingMin)
@@ -67,7 +70,7 @@ export default function TraderProductsCatalog() {
     } finally {
       setLoading(false)
     }
-  }, [categoryIds, inStock, maxPrice, minPrice, ratingMin, search, sort, supplierId])
+  }, [categoryIds, inStock, maxPrice, minOrderQuantity, minPrice, ratingMin, search, sort, supplierId])
 
   const loadCategories = useCallback(async () => {
     const response = await fetch('/api/categories', { cache: 'no-store' })
@@ -84,6 +87,32 @@ export default function TraderProductsCatalog() {
   useEffect(() => {
     void loadCategories()
   }, [loadCategories])
+
+  useEffect(() => {
+    const query = search.trim()
+    if (query.length < 2) {
+      setSuggestions([])
+      return
+    }
+
+    let cancelled = false
+    const timeout = setTimeout(async () => {
+      try {
+        const response = await fetch(`/api/products/suggestions?q=${encodeURIComponent(query)}`, { cache: 'no-store' })
+        const result = await response.json()
+        if (!cancelled && response.ok && result.success) {
+          setSuggestions(result.data ?? [])
+        }
+      } catch {
+        if (!cancelled) setSuggestions([])
+      }
+    }, 180)
+
+    return () => {
+      cancelled = true
+      clearTimeout(timeout)
+    }
+  }, [search])
 
   const suppliers = useMemo(() => {
     const map = new Map<string, string>()
@@ -127,10 +156,29 @@ export default function TraderProductsCatalog() {
   return (
     <div className="space-y-4">
       <section className="card-pro rounded-xl p-4 space-y-3">
-        <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-6">
-          <input className="input-pro" placeholder={language === 'ar' ? 'بحث بالاسم' : 'Search by name'} value={search} onChange={(e) => setSearch(e.target.value)} />
+        <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-7">
+          <input
+            className="input-pro"
+            list="product-suggestions"
+            placeholder={language === 'ar' ? 'بحث بالاسم' : 'Search by name'}
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+          <datalist id="product-suggestions">
+            {suggestions.map((item) => (
+              <option key={item} value={item} />
+            ))}
+          </datalist>
           <input className="input-pro" placeholder={language === 'ar' ? 'أقل سعر' : 'Min price'} type="number" value={minPrice} onChange={(e) => setMinPrice(e.target.value)} />
           <input className="input-pro" placeholder={language === 'ar' ? 'أعلى سعر' : 'Max price'} type="number" value={maxPrice} onChange={(e) => setMaxPrice(e.target.value)} />
+          <input
+            className="input-pro"
+            placeholder={language === 'ar' ? 'حد أدنى للطلب <=' : 'Max MOQ'}
+            type="number"
+            min={1}
+            value={minOrderQuantity}
+            onChange={(e) => setMinOrderQuantity(e.target.value)}
+          />
           <select className="input-pro" value={supplierId} onChange={(e) => setSupplierId(e.target.value)}>
             <option value="">{language === 'ar' ? 'كل الموردين' : 'All suppliers'}</option>
             {suppliers.map((s) => (
@@ -175,6 +223,7 @@ export default function TraderProductsCatalog() {
               setSearch('')
               setMinPrice('')
               setMaxPrice('')
+              setMinOrderQuantity('')
               setSupplierId('')
               setRatingMin('')
               setCategoryIds([])

@@ -4,6 +4,10 @@ import { prisma } from '@/lib/prisma'
 import { notifyAdmins, notifyUsers } from '@/lib/notifications'
 import { getSessionUser } from '@/lib/session'
 import { getRequestLanguage, i18nText } from '@/lib/request-language'
+import { appendOrderTimelineEvent } from '@/lib/order-timeline'
+import { assertSameOrigin } from '@/lib/security'
+import { calculatePlatformFee, getPlatformCommissionRate } from '@/lib/commission'
+import { writeAuditLog } from '@/lib/audit'
 
 type TxClient = Omit<typeof prisma, '$connect' | '$disconnect' | '$on' | '$transaction' | '$extends' | '$use'>
 
@@ -26,6 +30,9 @@ export async function GET() {
         orderBy: { createdAt: 'desc' },
         include: {
           payment: true,
+          timelineEvents: {
+            orderBy: { createdAt: 'asc' },
+          },
           items: {
             include: {
               product: { select: { id: true, name: true, nameAr: true, nameEn: true } },
@@ -42,10 +49,20 @@ export async function GET() {
         where: {
           items: { some: { supplierId: user.supplier.id } },
           paymentStatus: 'PAID',
-          status: { in: ['CONFIRMED', 'PROCESSING', 'SHIPPED', 'DELIVERED', 'COMPLETED'] },
+          status: {
+            in: [
+              'PLATFORM_FEE_CONFIRMED',
+              'SUPPLIER_PREPARING_ORDER',
+              'SHIPPED',
+              'AWAITING_DELIVERY_CONFIRMATION',
+              'DELIVERED',
+              'ORDER_CLOSED',
+            ],
+          },
         },
         orderBy: { createdAt: 'desc' },
         include: {
+          timelineEvents: { orderBy: { createdAt: 'asc' } },
           trader: { include: { user: { select: { id: true, name: true, email: true } } } },
           items: {
             where: { supplierId: user.supplier.id },
@@ -62,6 +79,7 @@ export async function GET() {
       const orders = await prisma.order.findMany({
         orderBy: { createdAt: 'desc' },
         include: {
+          timelineEvents: { orderBy: { createdAt: 'asc' } },
           trader: { include: { user: { select: { id: true, name: true, email: true } } } },
           items: {
             include: {
@@ -70,6 +88,7 @@ export async function GET() {
             },
           },
           payment: true,
+          disputes: true,
         },
       })
       return NextResponse.json({ success: true, data: orders })
@@ -84,6 +103,11 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
+    const sameOriginError = assertSameOrigin(request)
+    if (sameOriginError) {
+      return NextResponse.json({ success: false, error: sameOriginError }, { status: 403 })
+    }
+
     const language = getRequestLanguage(request)
     const user = await getSessionUser()
     if (!user || user.role !== Role.TRADER || !user.trader) {
@@ -115,6 +139,8 @@ export async function POST(request: Request) {
     const tax = 0
     const discount = 0
     const totalAmount = subtotal + shipping + tax - discount
+    const commissionRate = await getPlatformCommissionRate()
+    const platformFee = calculatePlatformFee(subtotal, commissionRate)
     const orderNumber = `ORD-${Date.now()}-${Math.floor(Math.random() * 1000)}`
 
     const created = await prisma.$transaction(async (tx: TxClient) => {
@@ -127,7 +153,9 @@ export async function POST(request: Request) {
           tax,
           shipping,
           discount,
-          status: 'PENDING',
+          platformFee,
+          platformFeeRate: commissionRate,
+          status: 'PENDING_PLATFORM_FEE_PAYMENT',
           paymentStatus: 'PENDING',
           shippingStatus: 'PENDING',
           paymentMethod: 'BANK_TRANSFER',
@@ -139,16 +167,17 @@ export async function POST(request: Request) {
                 quantity: body.quantity,
                 price: product.price,
                 total: subtotal,
-                commission: 0,
+                commission: Number((subtotal * commissionRate).toFixed(2)),
                 status: 'PENDING',
               },
             ],
           },
           payment: {
             create: {
-              amount: totalAmount,
-              platformFee: 0,
-              supplierAmount: totalAmount,
+              purpose: 'PLATFORM_FEE',
+              amount: platformFee,
+              platformFee,
+              supplierAmount: Number((subtotal - platformFee).toFixed(2)),
               status: 'PENDING',
               method: PaymentMethod.BANK_TRANSFER,
             },
@@ -164,16 +193,24 @@ export async function POST(request: Request) {
         data: { quantity: { decrement: body.quantity }, soldCount: { increment: body.quantity } },
       })
 
+      await appendOrderTimelineEvent(tx, {
+        orderId: order.id,
+        status: 'PENDING_PLATFORM_FEE_PAYMENT',
+        actorUserId: user.id,
+        language,
+        note: i18nText(language, 'تم إنشاء الطلب وبانتظار دفع عمولة المنصة', 'Order created and waiting platform fee payment'),
+      })
+
       return order
     })
 
     await notifyAdmins({
       type: 'ORDER_CREATED',
-      title: i18nText(language, 'يتطلب تحقق دفع يدوي', 'Manual payment verification required'),
+      title: i18nText(language, 'طلب جديد بانتظار عمولة المنصة', 'New order waiting platform fee'),
       message: i18nText(
         language,
-        `تم إنشاء الطلب ${created.orderNumber} ويحتاج مراجعة دفع يدوي (سيرياتيل كاش).`,
-        `Order ${created.orderNumber} placed and awaiting manual payment check (Syratel Cash).`,
+        `تم إنشاء الطلب ${created.orderNumber} وهو بانتظار دفع عمولة المنصة.`,
+        `Order ${created.orderNumber} created and waiting platform fee payment.`,
       ),
       data: { orderId: created.id, orderNumber: created.orderNumber },
     })
@@ -184,14 +221,28 @@ export async function POST(request: Request) {
       title: i18nText(language, 'تم إنشاء طلب جديد', 'New order created'),
       message: i18nText(
         language,
-        `تم إنشاء الطلب ${created.orderNumber} وإرساله للأدمن للتحقق اليدوي من الدفع.`,
-        `Order ${created.orderNumber} created and sent to admin for manual payment verification.`,
+        `تم إنشاء الطلب ${created.orderNumber}. سيصبح مرئياً للمورد بعد اعتماد عمولة المنصة.`,
+        `Order ${created.orderNumber} created. It will be visible to supplier after platform fee approval.`,
       ),
       data: { orderId: created.id, orderNumber: created.orderNumber },
     })
 
+    await writeAuditLog({
+      request,
+      actorUserId: user.id,
+      actorRole: user.role,
+      action: 'ORDER_CREATED',
+      entityType: 'ORDER',
+      entityId: created.id,
+      metadata: { orderNumber: created.orderNumber, platformFee },
+    })
+
     return NextResponse.json(
-      { success: true, data: created, message: i18nText(language, 'تم إنشاء الطلب وإرساله للأدمن للتحقق من الدفع', 'Order created and sent for admin payment verification') },
+      {
+        success: true,
+        data: created,
+        message: i18nText(language, 'تم إنشاء الطلب وبانتظار دفع عمولة المنصة', 'Order created and waiting for platform fee payment'),
+      },
       { status: 201 },
     )
   } catch (error) {
@@ -199,5 +250,4 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: false, error: 'Failed to create order' }, { status: 500 })
   }
 }
-
 

@@ -215,7 +215,7 @@ export default function TraderCartPage() {
           <div className="mt-2 border-t border-app pt-2 flex justify-between font-semibold"><span className="text-app">{language === 'ar' ? 'الإجمالي' : 'Total'}</span><span className="text-app">{formatSypAmount(summary.total, language)}</span></div>
         </div>
 
-        <p className="mt-3 text-xs text-muted">{language === 'ar' ? 'الدفع يدوي بالكامل عبر سيرياتيل كاش ويتم اعتماد الطلب من الأدمن.' : 'Payment is fully manual (Syriatel Cash) and requires admin approval.'}</p>
+        <p className="mt-3 text-xs text-muted">{language === 'ar' ? 'يتم دفع عمولة المنصة فقط عبر سيرياتيل كاش ثم تعتمد يدويًا من الأدمن.' : 'Only platform fee is paid manually (Syriatel Cash) and then verified by admin.'}</p>
 
         {!showPaymentForm ? (
           <button
@@ -223,12 +223,12 @@ export default function TraderCartPage() {
             disabled={!cart || !cart.items.length}
             onClick={() => setShowPaymentForm(true)}
           >
-            {language === 'ar' ? 'الدفع اليدوي وإرسال الوصل' : 'Manual payment & submit receipt'}
+            {language === 'ar' ? 'دفع عمولة المنصة وإرسال الوصل' : 'Pay platform fee & submit receipt'}
           </button>
         ) : (
           <div className="mt-4 space-y-2 rounded-lg border border-app p-3">
             <p className="text-xs font-semibold text-app">
-              {language === 'ar' ? 'املأ بيانات التحويل اليدوي:' : 'Fill manual transfer details:'}
+              {language === 'ar' ? 'املأ بيانات تحويل عمولة المنصة:' : 'Fill platform-fee transfer details:'}
             </p>
             <p className="text-xs text-muted">
               {language === 'ar'
@@ -301,7 +301,7 @@ export default function TraderCartPage() {
                 disabled={checkingOut || uploadingReceipt || !manualPayment.receiptUrl || !cart || !cart.items.length}
                 onClick={checkout}
               >
-                {checkingOut ? (language === 'ar' ? 'جارٍ إرسال الطلب...' : 'Submitting order...') : language === 'ar' ? 'إرسال الطلب للأدمن' : 'Submit order to admin'}
+                    {checkingOut ? (language === 'ar' ? 'جارٍ إرسال الطلب...' : 'Submitting order...') : language === 'ar' ? 'إرسال عمولة المنصة للأدمن' : 'Submit platform fee proof to admin'}
               </button>
               <button
                 className="btn-secondary !rounded-lg !px-3 !py-2 text-sm"

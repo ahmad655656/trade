@@ -13,6 +13,7 @@ const dictionary: Dictionary = {
   'nav.suppliers': { ar: 'الموردون', en: 'Suppliers' },
   'nav.products': { ar: 'المنتجات', en: 'Products' },
   'nav.dashboard': { ar: 'لوحة التحكم', en: 'Dashboard' },
+  'nav.messages': { ar: 'الرسائل', en: 'Messages' },
   'nav.login': { ar: 'تسجيل الدخول', en: 'Login' },
   'nav.register': { ar: 'إنشاء حساب', en: 'Register' },
   'nav.logout': { ar: 'تسجيل الخروج', en: 'Logout' },

@@ -13,6 +13,7 @@ const traderLinks = [
   { href: '/trader/addresses', label: { ar: 'العناوين', en: 'Addresses' } },
   { href: '/trader/profile', label: { ar: 'الملف الشخصي', en: 'Profile' } },
   { href: '/trader/reviews', label: { ar: 'تقييماتي', en: 'My Reviews' } },
+  { href: '/messages', label: { ar: 'مركز الرسائل', en: 'Message center' } },
 ]
 
 export default async function TraderLayout({ children }: { children: React.ReactNode }) {

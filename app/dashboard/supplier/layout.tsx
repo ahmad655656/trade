@@ -11,6 +11,7 @@ const supplierLinks = [
   { href: '/dashboard/supplier/reviews', label: { ar: 'التقييمات والمراجعات', en: 'Ratings and reviews' } },
   { href: '/dashboard/supplier/settings', label: { ar: 'إعدادات المتجر', en: 'Store settings' } },
   { href: '/dashboard/supplier/wallet', label: { ar: 'المحفظة', en: 'Wallet' } },
+  { href: '/messages', label: { ar: 'مركز الرسائل', en: 'Message center' } },
 ]
 
 export default async function SupplierLayout({ children }: { children: React.ReactNode }) {

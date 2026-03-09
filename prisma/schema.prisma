@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider   = "postgresql"
 }
 
 model User {
@@ -17,6 +17,8 @@ model User {
   verified      Boolean    @default(false)
   emailVerified DateTime?
   twoFactorAuth Boolean    @default(false)
+  twoFactorSecret String?
+  emailNotifications Boolean @default(false)
   lastLogin     DateTime?
   status        UserStatus @default(ACTIVE)
 
@@ -29,6 +31,14 @@ model User {
   reviews             Review[]                  @relation("Reviewer")
   sentMessages        Message[]                 @relation("MessageSender")
   conversationMembers ConversationParticipant[]
+  timelineEvents      OrderTimelineEvent[]      @relation("TimelineActor")
+  auditLogs           AuditLog[]                @relation("AuditActor")
+  securityEvents      SecurityEvent[]
+  loginAttempts       LoginAttempt[]
+  reviewedVerifications SupplierVerification[]  @relation("VerificationReviewer")
+  disputeMessages     DisputeMessage[]          @relation("DisputeMessageAuthor")
+  disputeAttachments  DisputeAttachment[]       @relation("DisputeAttachmentUploader")
+  resolvedDisputes    Dispute[]                 @relation("DisputeResolver")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -59,6 +69,10 @@ model Supplier {
   orders          OrderItem[]      @relation("SupplierOrders")
   reviews         Review[]         @relation("SupplierReviews")
   withdrawals     Withdrawal[]
+  verification    SupplierVerification?
+  rfqQuotes       RfqQuote[]
+  favoriteItems   FavoriteListItem[]
+  disputes        Dispute[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -77,6 +91,9 @@ model Trader {
   orders   Order[]
   cart     Cart?
   wishlist WishlistItem[]
+  rfqs     Rfq[]
+  favoriteLists FavoriteList[]
+  disputes Dispute[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -131,6 +148,7 @@ model Product {
   orderItems OrderItem[]
   wishlists  WishlistItem[]
   cartItems  CartItem[]
+  favoriteListItems FavoriteListItem[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -196,7 +214,8 @@ model Order {
   discount          Float         @default(0)
   commission        Float         @default(0)
   platformFee       Float         @default(0)
-  status            OrderStatus   @default(PENDING)
+  platformFeeRate   Float         @default(0)
+  status            OrderStatus   @default(PENDING_PLATFORM_FEE_PAYMENT)
   paymentStatus     PaymentStatus @default(PENDING)
   shippingStatus    ShippingStatus @default(PENDING)
   shippingAddressId String?
@@ -211,10 +230,16 @@ model Order {
   confirmedAt       DateTime?
   processedAt       DateTime?
   shippedAt         DateTime?
+  merchantConfirmedAt DateTime?
+  closedAt          DateTime?
+  disputeOpenedAt   DateTime?
   cancelledAt       DateTime?
   cancelledReason   String?
 
   reviews Review[]
+  timelineEvents OrderTimelineEvent[]
+  disputes Dispute[]
+  conversations Conversation[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -244,12 +269,15 @@ model Payment {
   id             String        @id @default(cuid())
   orderId        String        @unique
   order          Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  purpose        PaymentPurpose @default(PLATFORM_FEE)
   amount         Float
   platformFee    Float
   supplierAmount Float
   status         PaymentStatus @default(PENDING)
   method         PaymentMethod
   transactionId  String?
+  verifiedByAdminId String?
+  verifiedAt     DateTime?
   paidAt         DateTime?
   refundedAt     DateTime?
   refundReason   String?
@@ -379,6 +407,10 @@ model Review {
   toProductId   String?
   toProduct     Product? @relation(fields: [toProductId], references: [id])
   rating        Int
+  qualityRating Int?
+  deliverySpeedRating Int?
+  descriptionAccuracyRating Int?
+  communicationRating Int?
   title         String?
   comment       String?
   images        String[]
@@ -389,6 +421,215 @@ model Review {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model SupplierVerification {
+  id              String                     @id @default(cuid())
+  supplierId      String                     @unique
+  supplier        Supplier                   @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  status          SupplierVerificationStatus @default(PENDING)
+  phoneVerified   Boolean                    @default(false)
+  addressVerified Boolean                    @default(false)
+  reviewedById    String?
+  reviewedBy      User?                      @relation("VerificationReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+  rejectionReason String?
+  reviewedAt      DateTime?
+  documents       SupplierVerificationDocument[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model SupplierVerificationDocument {
+  id             String                   @id @default(cuid())
+  verificationId String
+  verification   SupplierVerification     @relation(fields: [verificationId], references: [id], onDelete: Cascade)
+  type           VerificationDocumentType
+  fileUrl        String
+  verified       Boolean                  @default(false)
+  notes          String?
+
+  createdAt DateTime @default(now())
+
+  @@index([verificationId, type])
+}
+
+model OrderTimelineEvent {
+  id          String     @id @default(cuid())
+  orderId     String
+  order       Order      @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  status      OrderStatus
+  title       String
+  note        String?
+  actorUserId String?
+  actor       User?      @relation("TimelineActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+  metadata    Json?
+
+  createdAt DateTime @default(now())
+
+  @@index([orderId, createdAt])
+}
+
+model AuditLog {
+  id          String @id @default(cuid())
+  actorUserId String?
+  actor       User?  @relation("AuditActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+  actorRole   Role?
+  action      String
+  entityType  String
+  entityId    String?
+  ipAddress   String?
+  userAgent   String?
+  metadata    Json?
+
+  createdAt DateTime @default(now())
+
+  @@index([entityType, entityId])
+  @@index([createdAt])
+}
+
+model Dispute {
+  id                String        @id @default(cuid())
+  orderId           String
+  order             Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  traderId          String
+  trader            Trader        @relation(fields: [traderId], references: [id], onDelete: Cascade)
+  supplierId        String?
+  supplier          Supplier?     @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+  reason            DisputeReason
+  status            DisputeStatus @default(OPEN)
+  description       String
+  resolutionSummary String?
+  resolvedById      String?
+  resolvedBy        User?         @relation("DisputeResolver", fields: [resolvedById], references: [id], onDelete: SetNull)
+  openedAt          DateTime      @default(now())
+  resolvedAt        DateTime?
+  messages          DisputeMessage[]
+  attachments       DisputeAttachment[]
+
+  @@index([orderId])
+  @@index([status, openedAt])
+}
+
+model DisputeMessage {
+  id          String  @id @default(cuid())
+  disputeId   String
+  dispute     Dispute @relation(fields: [disputeId], references: [id], onDelete: Cascade)
+  authorId    String
+  author      User    @relation("DisputeMessageAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  message     String
+  attachments String[]
+
+  createdAt DateTime @default(now())
+
+  @@index([disputeId, createdAt])
+}
+
+model DisputeAttachment {
+  id           String   @id @default(cuid())
+  disputeId    String
+  dispute      Dispute  @relation(fields: [disputeId], references: [id], onDelete: Cascade)
+  fileUrl      String
+  uploadedById String?
+  uploadedBy   User?    @relation("DisputeAttachmentUploader", fields: [uploadedById], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+
+  @@index([disputeId])
+}
+
+model Rfq {
+  id               String    @id @default(cuid())
+  traderId         String
+  trader           Trader    @relation(fields: [traderId], references: [id], onDelete: Cascade)
+  productRequest   String
+  quantity         Int
+  deliveryLocation String
+  notes            String?
+  status           RfqStatus @default(OPEN)
+  expiresAt        DateTime?
+  quotes           RfqQuote[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([traderId, createdAt])
+}
+
+model RfqQuote {
+  id                    String   @id @default(cuid())
+  rfqId                 String
+  rfq                   Rfq      @relation(fields: [rfqId], references: [id], onDelete: Cascade)
+  supplierId            String
+  supplier              Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  price                 Float
+  availableQuantity     Int
+  estimatedShippingDays Int
+  notes                 String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([rfqId, supplierId])
+}
+
+model FavoriteList {
+  id       String   @id @default(cuid())
+  traderId String
+  trader   Trader   @relation(fields: [traderId], references: [id], onDelete: Cascade)
+  name     String
+  items    FavoriteListItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([traderId, name])
+}
+
+model FavoriteListItem {
+  id         String             @id @default(cuid())
+  listId     String
+  list       FavoriteList       @relation(fields: [listId], references: [id], onDelete: Cascade)
+  targetType FavoriteTargetType
+  productId  String?
+  product    Product?           @relation(fields: [productId], references: [id], onDelete: SetNull)
+  supplierId String?
+  supplier   Supplier?          @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+
+  @@index([listId, targetType])
+}
+
+model LoginAttempt {
+  id        String  @id @default(cuid())
+  userId    String?
+  user      User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+  email     String
+  ipAddress String?
+  userAgent String?
+  success   Boolean
+
+  createdAt DateTime @default(now())
+
+  @@index([email, createdAt])
+  @@index([ipAddress, createdAt])
+}
+
+model SecurityEvent {
+  id          String            @id @default(cuid())
+  userId      String?
+  user        User?             @relation(fields: [userId], references: [id], onDelete: SetNull)
+  type        SecurityEventType
+  severity    Int               @default(1)
+  description String
+  ipAddress   String?
+  userAgent   String?
+  metadata    Json?
+
+  createdAt DateTime @default(now())
+
+  @@index([type, createdAt])
 }
 
 model Address {
@@ -430,6 +671,8 @@ model Notification {
 
 model Conversation {
   id            String                    @id @default(cuid())
+  orderId       String?
+  order         Order?                    @relation(fields: [orderId], references: [id], onDelete: SetNull)
   lastMessage   String?
   lastMessageAt DateTime?
 
@@ -438,6 +681,8 @@ model Conversation {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([orderId])
 }
 
 model ConversationParticipant {
@@ -507,6 +752,14 @@ enum ProductStatus {
 }
 
 enum OrderStatus {
+  PENDING_PLATFORM_FEE_PAYMENT
+  WAITING_FOR_PAYMENT_VERIFICATION
+  PLATFORM_FEE_CONFIRMED
+  SUPPLIER_PREPARING_ORDER
+  AWAITING_DELIVERY_CONFIRMATION
+  ORDER_CLOSED
+  PAYMENT_REJECTED
+  DISPUTE_OPENED
   PENDING
   CONFIRMED
   PROCESSING
@@ -540,6 +793,12 @@ enum PaymentMethod {
   BANK_TRANSFER
   WALLET
   INSTALLMENT
+}
+
+enum PaymentPurpose {
+  PLATFORM_FEE
+  FULL_PAYMENT
+  REFUND
 }
 
 enum ShippingStatus {
@@ -587,9 +846,17 @@ enum NotificationType {
   ORDER_CONFIRMED
   ORDER_SHIPPED
   ORDER_DELIVERED
+  DELIVERY_CONFIRMED
   ORDER_CANCELLED
   PAYMENT_RECEIVED
   PAYMENT_FAILED
+  DISPUTE_OPENED
+  DISPUTE_UPDATED
+  KYC_APPROVED
+  KYC_REJECTED
+  RFQ_RECEIVED
+  RFQ_QUOTED
+  SECURITY_ALERT
   WITHDRAWAL_COMPLETED
   REVIEW_RECEIVED
   MESSAGE_RECEIVED
@@ -603,6 +870,54 @@ enum ReviewStatus {
   ACTIVE
   HIDDEN
   FLAGGED
+}
+
+enum SupplierVerificationStatus {
+  PENDING
+  UNDER_REVIEW
+  APPROVED
+  REJECTED
+}
+
+enum VerificationDocumentType {
+  ID_DOCUMENT
+  BUSINESS_REGISTRATION
+  PHONE_PROOF
+  ADDRESS_PROOF
+}
+
+enum DisputeStatus {
+  OPEN
+  UNDER_REVIEW
+  RESOLVED
+  REJECTED
+}
+
+enum DisputeReason {
+  NOT_AS_DESCRIBED
+  DAMAGED_GOODS
+  MISSING_ITEMS
+  OTHER
+}
+
+enum RfqStatus {
+  OPEN
+  QUOTED
+  CLOSED
+  CANCELLED
+}
+
+enum FavoriteTargetType {
+  PRODUCT
+  SUPPLIER
+}
+
+enum SecurityEventType {
+  SUSPICIOUS_LOGIN
+  DUPLICATE_ACCOUNT
+  RATE_LIMIT_EXCEEDED
+  FAILED_2FA
+  ADMIN_ACTION
 }
 
 

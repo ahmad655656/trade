@@ -1,16 +1,9 @@
 import { NextResponse } from 'next/server'
-import { cookies } from 'next/headers'
+import { clearAuthCookies } from '@/lib/session-cookie'
 
 export async function POST() {
   try {
-    const cookieStore = await cookies()
-    cookieStore.set('token', '', {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      expires: new Date(0),
-      path: '/',
-    })
+    await clearAuthCookies()
 
     return NextResponse.json({
       success: true,

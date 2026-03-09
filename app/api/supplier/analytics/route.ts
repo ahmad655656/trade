@@ -89,12 +89,12 @@ export async function GET() {
       }),
     ])
 
-    const totalSales = orderItems.reduce((sum: number, item: any) => sum + item.total, 0)
-    const ordersCount = new Set(orderItems.map((item: any) => item.order.id)).size
+    const totalSales = orderItems.reduce((sum, item) => sum + item.total, 0)
+    const ordersCount = new Set(orderItems.map((item) => item.order.id)).size
     const averageOrderValue = ordersCount ? totalSales / ordersCount : 0
 
-    const recentSales = recentOrderItems.reduce((sum: number, item: any) => sum + item.total, 0)
-    const previousSales = previousPeriodOrderItems.reduce((sum: number, item: any) => sum + item.total, 0)
+    const recentSales = recentOrderItems.reduce((sum, item) => sum + item.total, 0)
+    const previousSales = previousPeriodOrderItems.reduce((sum, item) => sum + item.total, 0)
     const growthRate = previousSales > 0 ? ((recentSales - previousSales) / previousSales) * 100 : recentSales > 0 ? 100 : 0
 
     const salesByDayMap = new Map<string, number>()
@@ -110,15 +110,15 @@ export async function GET() {
       }
     }
     const salesLast7Days = Array.from(salesByDayMap.entries())
-      .sort((a: [string, number], b: [string, number]) => a[0].localeCompare(b[0]))
-      .map(([date, value]: [string, number]) => ({ label: date.slice(5), value: Math.round(value) }))
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .map(([date, value]) => ({ label: date.slice(5), value: Math.round(value) }))
 
     const statusMap = new Map<string, number>()
     for (const item of orderItems) {
       const status = item.order.status
       statusMap.set(status, (statusMap.get(status) ?? 0) + 1)
     }
-    const orderStatusBreakdown = Array.from(statusMap.entries()).map(([label, value]: [string, number]) => ({ label, value }))
+    const orderStatusBreakdown = Array.from(statusMap.entries()).map(([label, value]) => ({ label, value }))
 
     const categoryMap = new Map<string, number>()
     for (const item of orderItems) {
@@ -126,8 +126,8 @@ export async function GET() {
       categoryMap.set(categoryName, (categoryMap.get(categoryName) ?? 0) + item.total)
     }
     const categorySales = Array.from(categoryMap.entries())
-      .map(([label, value]: [string, number]) => ({ label, value: Math.round(value) }))
-      .sort((a: { value: number }, b: { value: number }) => b.value - a.value)
+      .map(([label, value]) => ({ label, value: Math.round(value) }))
+      .sort((a, b) => b.value - a.value)
       .slice(0, 8)
 
     const productSalesMap = new Map<string, { label: string; value: number }>()
@@ -138,19 +138,19 @@ export async function GET() {
       if (prev) prev.value += item.quantity
       else productSalesMap.set(key, { label, value: item.quantity })
     }
-    const topProducts = Array.from(productSalesMap.values()).sort((a: { value: number }, b: { value: number }) => b.value - a.value).slice(0, 10)
-    const leastSelling = Array.from(productSalesMap.values()).sort((a: { value: number }, b: { value: number }) => a.value - b.value).slice(0, 10)
+    const topProducts = Array.from(productSalesMap.values()).sort((a, b) => b.value - a.value).slice(0, 10)
+    const leastSelling = Array.from(productSalesMap.values()).sort((a, b) => a.value - b.value).slice(0, 10)
 
     const trendingViewed = [...products]
-      .sort((a: any, b: any) => b.views - a.views)
+      .sort((a, b) => b.views - a.views)
       .slice(0, 10)
-      .map((p: any) => ({ label: p.nameAr || p.nameEn || 'Product', value: p.views }))
+      .map((p) => ({ label: p.nameAr || p.nameEn || 'Product', value: p.views }))
 
     const lowStockCritical = products
-      .filter((p: any) => p.quantity < 5)
-      .map((p: any) => ({ id: p.id, nameAr: p.nameAr || p.nameEn || 'منتج', nameEn: p.nameEn || p.nameAr || 'Product', stock: p.quantity }))
+      .filter((p) => p.quantity < 5)
+      .map((p) => ({ id: p.id, nameAr: p.nameAr || p.nameEn || 'منتج', nameEn: p.nameEn || p.nameAr || 'Product', stock: p.quantity }))
 
-    const latestReviews = reviews.map((r: any) => ({
+    const latestReviews = reviews.map((r) => ({
       id: r.id,
       reviewerName: r.fromUser.name,
       productName: r.toProduct?.nameAr || r.toProduct?.nameEn || '-',
@@ -168,9 +168,9 @@ export async function GET() {
           ordersCount,
           averageOrderValue,
           growthRate,
-          activeProducts: products.filter((p: any) => p.quantity > 0).length,
-          lowStockCount: products.filter((p: any) => p.quantity > 0 && p.quantity <= 5).length,
-          averageRating: products.length ? products.reduce((sum: number, p: any) => sum + p.rating, 0) / products.length : 0,
+          activeProducts: products.filter((p) => p.quantity > 0).length,
+          lowStockCount: products.filter((p) => p.quantity > 0 && p.quantity <= 5).length,
+          averageRating: products.length ? products.reduce((sum, p) => sum + p.rating, 0) / products.length : 0,
         },
         salesLast7Days,
         orderStatusBreakdown,
@@ -180,14 +180,14 @@ export async function GET() {
         trendingViewed,
         lowStockCritical,
         latestReviews,
-        latestOrders: latestOrders.map((order: any) => ({
+        latestOrders: latestOrders.map((order) => ({
           id: order.id,
           orderNumber: order.orderNumber,
           createdAt: order.createdAt.toISOString(),
           status: order.status,
           totalAmount: order.totalAmount,
           productName: order.items[0]?.product.nameAr || order.items[0]?.product.nameEn || '-',
-          quantity: order.items.reduce((sum: number, it: any) => sum + it.quantity, 0),
+          quantity: order.items.reduce((sum, it) => sum + it.quantity, 0),
           unitPrice: order.items[0]?.price || 0,
         })),
       },
@@ -197,4 +197,5 @@ export async function GET() {
     return NextResponse.json({ success: false, error: 'Failed to load supplier analytics' }, { status: 500 })
   }
 }
+
 

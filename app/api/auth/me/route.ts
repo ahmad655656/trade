@@ -17,6 +17,8 @@ export async function GET() {
         name: user.name,
         role: user.role,
         status: user.status,
+        twoFactorAuth: user.twoFactorAuth,
+        emailNotifications: user.emailNotifications,
         supplier: user.supplier,
         trader: user.trader,
         admin: user.admin,

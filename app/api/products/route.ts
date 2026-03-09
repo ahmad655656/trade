@@ -3,6 +3,9 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getSessionUser } from '@/lib/session'
 import { productCreateSchema } from '@/lib/validation'
+import { similarity } from '@/lib/search'
+import { assertSameOrigin } from '@/lib/security'
+import { writeAuditLog } from '@/lib/audit'
 
 type ProductFindManyArgs = NonNullable<Parameters<typeof prisma.product.findMany>[0]>
 
@@ -43,9 +46,11 @@ export async function GET(request: Request) {
     const minPriceRaw = searchParams.get('minPrice')
     const maxPriceRaw = searchParams.get('maxPrice')
     const ratingMinRaw = searchParams.get('ratingMin')
+    const minOrderQuantityRaw = searchParams.get('minOrderQuantity')
     const minPrice = minPriceRaw === null || minPriceRaw.trim() === '' ? null : Number(minPriceRaw)
     const maxPrice = maxPriceRaw === null || maxPriceRaw.trim() === '' ? null : Number(maxPriceRaw)
     const ratingMin = ratingMinRaw === null || ratingMinRaw.trim() === '' ? null : Number(ratingMinRaw)
+    const minOrderQuantity = minOrderQuantityRaw === null || minOrderQuantityRaw.trim() === '' ? null : Number(minOrderQuantityRaw)
     const inStock = searchParams.get('inStock') === '1'
     const sort = searchParams.get('sort') ?? 'newest'
 
@@ -78,6 +83,7 @@ export async function GET(request: Request) {
     if (minPrice !== null && !Number.isNaN(minPrice)) where.price = { ...(where.price as object), gte: minPrice }
     if (maxPrice !== null && !Number.isNaN(maxPrice)) where.price = { ...(where.price as object), lte: maxPrice }
     if (ratingMin !== null && !Number.isNaN(ratingMin)) where.rating = { gte: ratingMin }
+    if (minOrderQuantity !== null && !Number.isNaN(minOrderQuantity) && minOrderQuantity > 0) where.minOrderQuantity = { lte: minOrderQuantity }
     if (inStock) where.quantity = { gt: 0 }
     if (categoryIds.length) where.categoryId = { in: categoryIds }
 
@@ -102,14 +108,40 @@ export async function GET(request: Request) {
       },
     })
 
-    const products =
+    let products =
       sort === 'discount_desc'
-        ? [...productsRaw].sort((a: any, b: any) => {
+        ? [...productsRaw].sort((a, b) => {
             const discountA = (a.compareAtPrice ?? a.price) - a.price
             const discountB = (b.compareAtPrice ?? b.price) - b.price
             return discountB - discountA
           })
         : productsRaw
+
+    if (!mine && search && products.length === 0) {
+      const candidates = await prisma.product.findMany({
+        where: {
+          status: ProductStatus.ACTIVE,
+          ...(supplierId ? { supplierId } : {}),
+        },
+        take: 120,
+        include: {
+          category: { select: { id: true, name: true, nameAr: true, nameEn: true } },
+          supplier: { include: { user: { select: { id: true, name: true } } } },
+        },
+      })
+
+      const normalizedSearch = search.toLowerCase()
+      products = candidates
+        .map((item) => {
+          const names = [item.name, item.nameAr || '', item.nameEn || '']
+          const score = Math.max(...names.map((name) => similarity(normalizedSearch, name.toLowerCase())))
+          return { item, score }
+        })
+        .filter((entry) => entry.score >= 0.45)
+        .sort((a, b) => b.score - a.score)
+        .slice(0, limit)
+        .map((entry) => entry.item)
+    }
 
     return NextResponse.json({ success: true, data: products })
   } catch (error) {
@@ -120,6 +152,11 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    const sameOriginError = assertSameOrigin(request)
+    if (sameOriginError) {
+      return NextResponse.json({ success: false, error: sameOriginError }, { status: 403 })
+    }
+
     const user = await getSessionUser()
     if (!user || user.role !== 'SUPPLIER' || !user.supplier) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
@@ -159,6 +196,18 @@ export async function POST(request: Request) {
       },
       include: {
         category: { select: { id: true, name: true, nameAr: true, nameEn: true } },
+      },
+    })
+
+    await writeAuditLog({
+      request,
+      actorUserId: user.id,
+      actorRole: user.role,
+      action: 'PRODUCT_CREATED',
+      entityType: 'PRODUCT',
+      entityId: created.id,
+      metadata: {
+        supplierId: user.supplier.id,
       },
     })
 

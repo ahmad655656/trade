@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useEffect, useMemo, useState } from 'react'
-import { BellIcon } from '@heroicons/react/24/outline'
+import { BellIcon, ChatBubbleLeftRightIcon } from '@heroicons/react/24/outline'
 import { useUi } from '@/components/providers/UiProvider'
 
 type UserRole = 'ADMIN' | 'SUPPLIER' | 'TRADER'
@@ -37,6 +37,7 @@ export default function Navbar() {
   const [notifications, setNotifications] = useState<AppNotification[]>([])
   const [openNotifications, setOpenNotifications] = useState(false)
   const [lastUnreadCount, setLastUnreadCount] = useState(0)
+  const [messageUnreadCount, setMessageUnreadCount] = useState(0)
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -128,6 +129,37 @@ export default function Navbar() {
       clearInterval(interval)
     }
   }, [isLoggedIn, lastUnreadCount])
+
+  useEffect(() => {
+    if (!isLoggedIn) {
+      setMessageUnreadCount(0)
+      return
+    }
+
+    let mounted = true
+
+    const loadMessageCounts = async () => {
+      try {
+        const response = await fetch('/api/messages/conversations', { cache: 'no-store' })
+        const result = await response.json()
+        if (!mounted || !response.ok || !result.success) return
+
+        const total = (result.data ?? []).reduce((sum: number, item: { unreadCount?: number }) => {
+          return sum + Number(item.unreadCount ?? 0)
+        }, 0)
+        setMessageUnreadCount(total)
+      } catch {
+        // Ignore polling errors; next interval will retry.
+      }
+    }
+
+    void loadMessageCounts()
+    const interval = setInterval(loadMessageCounts, 15000)
+    return () => {
+      mounted = false
+      clearInterval(interval)
+    }
+  }, [isLoggedIn])
 
   const dashboardHref = useMemo(() => {
     if (userRole === 'ADMIN') return '/dashboard/admin'
@@ -262,6 +294,15 @@ export default function Navbar() {
                 </div>
                 <Link href={dashboardHref} className="btn-primary !rounded-lg !px-3 !py-2 text-sm">
                   {t('nav.dashboard')}
+                </Link>
+                <Link href="/messages" className="btn-secondary !rounded-lg !px-3 !py-2 text-sm">
+                  <ChatBubbleLeftRightIcon className="h-4 w-4" />
+                  <span>{t('nav.messages')}</span>
+                  {messageUnreadCount > 0 ? (
+                    <span className="rounded-full bg-red-500 px-1.5 py-0.5 text-[10px] leading-none text-white">
+                      {messageUnreadCount}
+                    </span>
+                  ) : null}
                 </Link>
                 <button
                   onClick={handleLogout}

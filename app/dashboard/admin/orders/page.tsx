@@ -77,9 +77,9 @@ export default function AdminOrdersPage() {
   return (
     <section className="space-y-4">
       <div className="card-pro rounded-xl p-6">
-        <h2 className="text-xl font-semibold text-app">{language === 'ar' ? 'اعتماد الدفع اليدوي للطلبات' : 'Manual payment verification for orders'}</h2>
+        <h2 className="text-xl font-semibold text-app">{language === 'ar' ? 'اعتماد دفع عمولة المنصة للطلبات' : 'Platform-fee payment verification for orders'}</h2>
         <p className="mt-2 text-muted">
-          {language === 'ar' ? 'راجع تحويل سيرياتيل كاش يدويًا ثم وافق/ارفض الطلب.' : 'Verify Syriatel Cash transfer manually then approve/reject order.'}
+          {language === 'ar' ? 'راجع تحويل عمولة المنصة عبر سيرياتيل كاش ثم وافق/ارفض.' : 'Verify manual Syriatel Cash platform-fee transfer then approve/reject.'}
         </p>
       </div>
 
@@ -103,7 +103,7 @@ export default function AdminOrdersPage() {
                   <th className="p-2 text-start">{language === 'ar' ? 'الإجمالي' : 'Total'}</th>
                   <th className="p-2 text-start">{language === 'ar' ? 'حالة الدفع' : 'Payment'}</th>
                   <th className="p-2 text-start">{language === 'ar' ? 'الحالة' : 'Status'}</th>
-                  <th className="p-2 text-start">{language === 'ar' ? 'بيانات الدفع اليدوي' : 'Manual payment details'}</th>
+                  <th className="p-2 text-start">{language === 'ar' ? 'بيانات عمولة المنصة' : 'Platform fee details'}</th>
                   <th className="p-2 text-start">{language === 'ar' ? 'الإجراءات' : 'Actions'}</th>
                 </tr>
               </thead>
@@ -137,7 +137,7 @@ export default function AdminOrdersPage() {
                           <p>{language === 'ar' ? `المحوّل إليه: ${manual.transferTo || '-'}` : `Transfer to: ${manual.transferTo || '-'}`}</p>
                           <p>{new Date(manual.submittedAt).toLocaleString()}</p>
                           <p className="text-[11px] opacity-80">
-                            {language === 'ar' ? 'تحقق من الاسم/الرقم/الصورة ثم اعتمد الدفع أو ارفضه.' : 'Check sender/number/receipt image then approve or reject.'}
+                            {language === 'ar' ? 'تحقق من الاسم/الرقم/الصورة ثم اعتمد عمولة المنصة أو ارفضها.' : 'Check sender/number/receipt image then approve or reject platform fee.'}
                           </p>
                           {manual.receiptUrl ? (
                             <a
@@ -162,14 +162,14 @@ export default function AdminOrdersPage() {
                             onClick={() => verifyPayment(order.id, true)}
                             disabled={processingId === order.id}
                           >
-                            {language === 'ar' ? 'قبول الدفع' : 'Approve payment'}
+                            {language === 'ar' ? 'اعتماد العمولة' : 'Approve fee'}
                           </button>
                           <button
                             className="btn-secondary !rounded-md !px-2 !py-1 text-xs disabled:opacity-60"
                             onClick={() => verifyPayment(order.id, false)}
                             disabled={processingId === order.id}
                           >
-                            {language === 'ar' ? 'رفض الدفع' : 'Reject payment'}
+                            {language === 'ar' ? 'رفض العمولة' : 'Reject fee'}
                           </button>
                         </div>
                       ) : (
