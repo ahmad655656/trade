@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { Prisma } from '@prisma/client'
 import { NotificationType, OrderItemStatus, OrderStatus, Role, ShippingStatus } from '@/lib/prisma-enums'
 import { prisma } from '@/lib/prisma'
 import { notifyAdmins, notifyUsers } from '@/lib/notifications'
@@ -79,7 +80,7 @@ export async function PATCH(request: Request, { params }: Params) {
       notificationType = 'ORDER_CANCELLED'
     }
 
-    const updated = await prisma.$transaction(async (tx) => {
+    const updated = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       await tx.orderItem.updateMany({
         where: { orderId: order.id, supplierId: user.supplier!.id },
         data: { status: itemStatus },

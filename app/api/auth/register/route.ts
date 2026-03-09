@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { Prisma } from '@prisma/client'
 import { cookies } from 'next/headers'
 import { Role, UserStatus } from '@/lib/prisma-enums'
 import { prisma } from '@/lib/prisma'
@@ -28,7 +29,7 @@ export async function POST(request: Request) {
     }
     const hashedPassword = await hashPassword(password)
 
-    const user = await prisma.$transaction(async (tx) => {
+    const user = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       const createdUser = await tx.user.create({
         data: {
           email,

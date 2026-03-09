@@ -1,4 +1,5 @@
-﻿import { NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
+import { Prisma } from '@prisma/client'
 import { PaymentMethod, ProductStatus, Role } from '@/lib/prisma-enums'
 import { prisma } from '@/lib/prisma'
 import { notifyAdmins, notifyUsers } from '@/lib/notifications'
@@ -115,7 +116,7 @@ export async function POST(request: Request) {
     const totalAmount = subtotal + shipping + tax - discount
     const orderNumber = `ORD-${Date.now()}-${Math.floor(Math.random() * 1000)}`
 
-    const created = await prisma.$transaction(async (tx) => {
+    const created = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       const order = await tx.order.create({
         data: {
           orderNumber,

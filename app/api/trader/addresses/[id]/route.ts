@@ -1,5 +1,6 @@
 import { AddressType, Role } from '@/lib/prisma-enums'
 import { NextResponse } from 'next/server'
+import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import { getRequestLanguage, i18nText } from '@/lib/request-language'
 import { getSessionUser } from '@/lib/session'
@@ -86,7 +87,7 @@ export async function PATCH(request: Request, { params }: Params) {
       )
     }
 
-    const updated = await prisma.$transaction(async (tx) => {
+    const updated = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       if (payload.isDefault) {
         await tx.address.updateMany({
           where: { userId: user.id, isDefault: true, NOT: { id } },
@@ -138,7 +139,7 @@ export async function DELETE(request: Request, { params }: Params) {
       return NextResponse.json({ success: false, error: i18nText(language, 'العنوان غير موجود', 'Address not found') }, { status: 404 })
     }
 
-    await prisma.$transaction(async (tx) => {
+    await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       await tx.address.delete({ where: { id } })
 
       if (existing.isDefault) {
