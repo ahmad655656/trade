@@ -1,6 +1,5 @@
 import { AddressType, Role } from '@/lib/prisma-enums'
 import { NextResponse } from 'next/server'
-import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import { getRequestLanguage, i18nText } from '@/lib/request-language'
 import { getSessionUser } from '@/lib/session'
@@ -19,6 +18,7 @@ type AddressPayload = {
   longitude?: number | null
   isDefault?: boolean
 }
+type TxClient = Omit<typeof prisma, '$connect' | '$disconnect' | '$on' | '$transaction' | '$extends' | '$use'>
 
 function sanitize(body: AddressPayload) {
   return {
@@ -78,7 +78,7 @@ export async function POST(request: Request) {
     const count = await prisma.address.count({ where: { userId: user.id } })
     const shouldBeDefault = payload.isDefault || count === 0
 
-    const created = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+    const created = await prisma.$transaction(async (tx: TxClient) => {
       if (shouldBeDefault) {
         await tx.address.updateMany({
           where: { userId: user.id, isDefault: true },

@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server'
-import { Prisma } from '@prisma/client'
 import { OrderStatus, Role } from '@/lib/prisma-enums'
 import { prisma } from '@/lib/prisma'
 import { notifyUsers } from '@/lib/notifications'
@@ -12,6 +11,7 @@ type VerifyPayload = {
   approved: boolean
   notes?: string
 }
+type TxClient = Omit<typeof prisma, '$connect' | '$disconnect' | '$on' | '$transaction' | '$extends' | '$use'>
 
 export async function PATCH(request: Request, { params }: Params) {
   try {
@@ -67,7 +67,7 @@ export async function PATCH(request: Request, { params }: Params) {
         )
       }
 
-      const updated = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+      const updated = await prisma.$transaction(async (tx: TxClient) => {
         const payment = await tx.payment.update({
           where: { orderId: order.id },
           data: {
@@ -108,7 +108,7 @@ export async function PATCH(request: Request, { params }: Params) {
       return NextResponse.json({ success: true, data: updated, message: i18nText(language, 'تم قبول الدفع وتأكيد الطلب', 'Payment approved and order confirmed') })
     }
 
-    const failed = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+    const failed = await prisma.$transaction(async (tx: TxClient) => {
       await tx.payment.update({
         where: { orderId: order.id },
         data: {

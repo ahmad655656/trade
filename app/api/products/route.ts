@@ -1,9 +1,10 @@
-﻿import { Prisma } from '@prisma/client'
 import { ProductStatus } from '@/lib/prisma-enums'
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getSessionUser } from '@/lib/session'
 import { productCreateSchema } from '@/lib/validation'
+
+type ProductFindManyArgs = NonNullable<Parameters<typeof prisma.product.findMany>[0]>
 
 async function resolveCategoryId(categoryId?: string) {
   if (categoryId) {
@@ -53,7 +54,7 @@ export async function GET(request: Request) {
       .map((v) => v.trim())
       .filter(Boolean)
 
-    const where: Prisma.ProductWhereInput = {}
+    const where: ProductFindManyArgs['where'] = {}
 
     if (mine) {
       const user = await getSessionUser()
@@ -80,7 +81,7 @@ export async function GET(request: Request) {
     if (inStock) where.quantity = { gt: 0 }
     if (categoryIds.length) where.categoryId = { in: categoryIds }
 
-    const orderBy: Prisma.ProductOrderByWithRelationInput =
+    const orderBy: ProductFindManyArgs['orderBy'] =
       sort === 'price_asc'
         ? { price: 'asc' }
         : sort === 'price_desc'
