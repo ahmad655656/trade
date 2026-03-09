@@ -28,13 +28,13 @@ export async function notifyAdmins(params: {
   message?: string
   data?: unknown
 }) {
-  const admins = await prisma.user.findMany({
+  const admins: Array<{ id: string }> = await prisma.user.findMany({
     where: { role: 'ADMIN' },
     select: { id: true },
   })
 
   await notifyUsers({
-    userIds: admins.map((admin) => admin.id),
+    userIds: admins.map((admin: { id: string }) => admin.id),
     type: params.type,
     title: params.title,
     message: params.message,
