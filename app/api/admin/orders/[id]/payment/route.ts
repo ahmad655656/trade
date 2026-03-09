@@ -12,6 +12,7 @@ type VerifyPayload = {
   notes?: string
 }
 type TxClient = Omit<typeof prisma, '$connect' | '$disconnect' | '$on' | '$transaction' | '$extends' | '$use'>
+type OrderSupplierItem = { supplier: { user: { id: string } } }
 
 export async function PATCH(request: Request, { params }: Params) {
   try {
@@ -93,7 +94,7 @@ export async function PATCH(request: Request, { params }: Params) {
       await notifyUsers({
         userIds: [
           order.trader.user.id,
-          ...order.items.map((item) => item.supplier.user.id),
+          ...order.items.map((item: OrderSupplierItem) => item.supplier.user.id),
         ],
         type: 'ORDER_CONFIRMED',
         title: i18nText(language, 'تم اعتماد الدفع يدويًا', 'Payment verified manually'),
@@ -131,7 +132,7 @@ export async function PATCH(request: Request, { params }: Params) {
     await notifyUsers({
       userIds: [
         order.trader.user.id,
-        ...order.items.map((item) => item.supplier.user.id),
+        ...order.items.map((item: OrderSupplierItem) => item.supplier.user.id),
       ],
       type: 'PAYMENT_FAILED',
       title: i18nText(language, 'تم رفض التحقق من الدفع', 'Payment verification failed'),

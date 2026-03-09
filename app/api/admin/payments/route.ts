@@ -88,7 +88,7 @@ export async function GET(request: Request) {
     })
 
     const mapped = payments
-      .map((payment) => {
+      .map((payment: any) => {
         const manual = parseManualPayload(payment.refundReason)
         if (hasReceipt && !manual?.receiptUrl) return null
         return {

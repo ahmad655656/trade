@@ -13,6 +13,7 @@ type ManualPaymentPayload = {
   receiptUrl: string
   notes?: string
 }
+type SupplierItem = { supplier: { user: { id: string } } }
 
 export async function PATCH(request: Request, { params }: Params) {
   try {
@@ -93,7 +94,7 @@ export async function PATCH(request: Request, { params }: Params) {
     })
 
     await notifyUsers({
-      userIds: [user.id, ...Array.from(new Set(order.items.map((item) => item.supplier.user.id)))],
+      userIds: [user.id, ...Array.from(new Set(order.items.map((item: SupplierItem) => item.supplier.user.id)))],
       type: NotificationType.SYSTEM,
       title: i18nText(language, `تم إرسال إثبات الدفع للطلب ${order.orderNumber}`, `Payment proof submitted for ${order.orderNumber}`),
       message: i18nText(language, 'بانتظار اعتماد الأدمن.', 'Waiting for admin confirmation.'),

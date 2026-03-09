@@ -51,7 +51,7 @@ export async function GET(request: Request) {
 
     const categoryIds = (searchParams.get('categoryIds') || '')
       .split(',')
-      .map((v) => v.trim())
+      .map((v: string) => v.trim())
       .filter(Boolean)
 
     const where: ProductFindManyArgs['where'] = {}
@@ -104,7 +104,7 @@ export async function GET(request: Request) {
 
     const products =
       sort === 'discount_desc'
-        ? [...productsRaw].sort((a, b) => {
+        ? [...productsRaw].sort((a: any, b: any) => {
             const discountA = (a.compareAtPrice ?? a.price) - a.price
             const discountB = (b.compareAtPrice ?? b.price) - b.price
             return discountB - discountA

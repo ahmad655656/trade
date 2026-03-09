@@ -14,6 +14,15 @@ type CheckoutPayload = {
   receiptUrl: string
   notes?: string
 }
+type CheckoutCartItem = {
+  productId: string
+  quantity: number
+  price: number
+  product: {
+    supplierId: string
+    supplier: { user: { id: string } }
+  }
+}
 
 export async function POST(request: Request) {
   try {
@@ -67,7 +76,7 @@ export async function POST(request: Request) {
       }
     }
 
-    const subtotal = Number(cart.items.reduce((sum, item) => sum + item.quantity * item.price, 0).toFixed(2))
+    const subtotal = Number(cart.items.reduce((sum: number, item: CheckoutCartItem) => sum + item.quantity * item.price, 0).toFixed(2))
     const shipping = 0
     const tax = 0
     const discount = 0
@@ -96,7 +105,7 @@ export async function POST(request: Request) {
           shippingStatus: 'PENDING',
           paymentMethod: 'BANK_TRANSFER',
           items: {
-            create: cart.items.map((item) => ({
+            create: cart.items.map((item: CheckoutCartItem) => ({
               productId: item.productId,
               supplierId: item.product.supplierId,
               quantity: item.quantity,
@@ -136,7 +145,7 @@ export async function POST(request: Request) {
 
     await recalculateCartTotals(cart.id)
 
-    const supplierUserIds = Array.from(new Set(cart.items.map((item) => item.product.supplier.user.id)))
+    const supplierUserIds = Array.from(new Set(cart.items.map((item: CheckoutCartItem) => item.product.supplier.user.id)))
 
     await notifyAdmins({
       type: NotificationType.ORDER_CREATED,
