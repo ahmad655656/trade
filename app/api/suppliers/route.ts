@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 
 export async function GET(request: Request) {
@@ -19,7 +20,7 @@ export async function GET(request: Request) {
     const productCountMap = new Map(productCounts.map(pc => [pc.supplierId, pc._count.id]))
 
     // Build where clause
-    const where: Parameters<typeof prisma.supplier.findMany>[0]['where'] = {}
+    const where: Prisma.SupplierWhereInput = {}
 
     if (search) {
       where.OR = [
@@ -32,7 +33,7 @@ export async function GET(request: Request) {
       where.verified = true
     }
 
-    let orderBy: Parameters<typeof prisma.supplier.findMany>[0]['orderBy'] = {
+    let orderBy: Prisma.SupplierOrderByWithRelationInput = {
       createdAt: 'desc',
     }
 
