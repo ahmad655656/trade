@@ -37,6 +37,10 @@ type Notification = {
   createdAt: string
 }
 
+type ConversationSummary = {
+  unreadCount?: number | null
+}
+
 
 /* -------------------------------- NAVBAR -------------------------------- */
 
@@ -161,10 +165,10 @@ export default function Navbar() {
         const res = await fetch('/api/messages/conversations', { cache: 'no-store' })
         const data = await res.json()
 
-        const count = data.data?.reduce(
-          (sum: number, item: any) => sum + (item.unreadCount ?? 0),
-          0
-        )
+        const count = (data.data as ConversationSummary[] | undefined)?.reduce(
+          (sum, item) => sum + (item.unreadCount ?? 0),
+          0,
+        ) ?? 0
 
         setMessageUnread(count)
 

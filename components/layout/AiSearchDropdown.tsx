@@ -13,7 +13,7 @@ interface Props {
   onClose: () => void
   loading: boolean
   onQueryChange?: (value: string) => void
-  anchorRef?: RefObject<HTMLElement>
+  anchorRef?: RefObject<HTMLElement | null>
 }
 
 export default function AiSearchDropdown({ query, results, onClose, loading, onQueryChange, anchorRef }: Props) {
