@@ -266,7 +266,7 @@ export default function SupplierSettingsPage() {
     }
 
     const estimatedRaw = draft.estimatedDays ?? method.estimatedDays ?? null
-    const estimatedValue = estimatedRaw === '' || estimatedRaw === null ? null : Number(estimatedRaw)
+    const estimatedValue = estimatedRaw === null ? null : Number(estimatedRaw)
     if (estimatedValue !== null && Number.isNaN(estimatedValue)) {
       toast.error(language === 'ar' ? 'أدخل عدد أيام صحيح' : 'Enter valid estimated days')
       return
