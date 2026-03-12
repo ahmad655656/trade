@@ -30,4 +30,17 @@ export interface SupplierListItem {
   totalProducts: number
   totalReviews: number
   totalSales: number
-  created
+  createdAt: Date
+}
+
+export interface SearchableItem {
+  id: string
+  type: 'product' | 'supplier' | 'category'
+  title: string
+  description: string
+  url: string
+  score: number
+  price?: number
+  rating?: number
+  image?: string
+}
