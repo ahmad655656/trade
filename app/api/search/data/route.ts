@@ -9,30 +9,28 @@ export async function GET(request: Request) {
     const type = searchParams.get('type') as 'products' | 'suppliers' | 'all' | null ?? 'all'
     const categoryId = searchParams.get('categoryId') || undefined
 
-const items: Array<{
-  id: string
-  type: 'product' | 'supplier'
-  title: string
-  description: string
-  url: string
-  score: number
-  price?: number
-  image?: string
-  supplier?: any
-  category?: any
-  rating?: number
-  productCount?: number
-}> = []
+    const items: Array<{
+      id: string
+      type: 'product' | 'supplier'
+      title: string
+      description: string
+      url: string
+      score: number
+      price?: number
+      image?: string
+      supplier?: any
+      category?: any
+      rating?: number
+      productCount?: number
+    }> = []
 
     if (!q || q.length < 2) {
       // If no meaningful query, return empty
       return NextResponse.json({ success: true, data: [], query: q, total: 0 })
     }
 
-    const likeQuery = `%${q}%`
-
     if (type === 'products' || type === 'all') {
-const productsQuery: any = {
+      const products = await prisma.product.findMany({
         where: {
           status: 'ACTIVE',
           quantity: { gt: 0 },
@@ -59,22 +57,20 @@ const productsQuery: any = {
           descriptionEn: true,
           price: true,
           images: true,
-          supplier: { 
-            select: { 
+          supplier: {
+            select: {
               id: true,
               companyName: true,
               logo: true,
               verified: true,
-              rating: true 
-            } 
+              rating: true,
+            },
           },
           category: {
-            select: { nameAr: true, nameEn: true }
-          }
-        }
-      }
-
-      const products = await prisma.product.findMany(productsQuery)
+            select: { nameAr: true, nameEn: true },
+          },
+        },
+      })
       
       const productItems = products.map(p => {
         let score = 0
@@ -101,24 +97,22 @@ const productsQuery: any = {
     }
 
     if (type === 'suppliers' || type === 'all') {
-const suppliersQuery: any = {
+      const suppliers = await prisma.supplier.findMany({
         where: {
           verified: true,
           OR: [
             { companyName: { contains: q, mode: 'insensitive' } },
             { user: { name: { contains: q, mode: 'insensitive' } } },
-            { description: { contains: q, mode: 'insensitive' } }
-          ]
+            { description: { contains: q, mode: 'insensitive' } },
+          ],
         },
         orderBy: { rating: 'desc' },
         take: Number(limit),
-        include: { 
+        include: {
           user: { select: { name: true } },
-          _count: { select: { products: true, reviews: true } }
-        }
-      }
-
-      const suppliers = await prisma.supplier.findMany(suppliersQuery)
+          _count: { select: { products: true, reviews: true } },
+        },
+      })
       
       const supplierItems = suppliers.map(s => {
         let score = 0
