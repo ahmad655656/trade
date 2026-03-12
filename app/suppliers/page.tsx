@@ -300,7 +300,7 @@ function SupplierCard({
 }: {
   supplier: SupplierListItem
   renderStars: (rating: number) => React.ReactNode
-  t: (typeof content)[typeof content['ar']]
+  t: (typeof content)['ar']
   language: 'ar' | 'en'
 }) {
   return (
@@ -420,4 +420,3 @@ const content = {
     next: 'Next',
   },
 }
-
