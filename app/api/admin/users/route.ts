@@ -54,7 +54,6 @@ export async function GET(request: Request) {
       phone: string | null
       role: string
       status: string
-      verified: boolean
       lastLogin: Date | null
       createdAt: Date
     }>
@@ -69,7 +68,6 @@ export async function GET(request: Request) {
           phone: true,
           role: true,
           status: true,
-          verified: true,
           lastLogin: true,
           createdAt: true,
         },
@@ -88,7 +86,6 @@ export async function GET(request: Request) {
           phone: true,
           role: true,
           status: true,
-          verified: true,
           createdAt: true,
         },
         orderBy: { createdAt: 'desc' },
