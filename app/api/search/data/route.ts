@@ -9,6 +9,19 @@ export async function GET(request: Request) {
     const type = searchParams.get('type') as 'products' | 'suppliers' | 'all' | null ?? 'all'
     const categoryId = searchParams.get('categoryId') || undefined
 
+    type SupplierSummary = {
+      id: string
+      companyName: string
+      logo: string | null
+      verified: boolean
+      rating: number
+    }
+
+    type CategorySummary = {
+      nameAr: string | null
+      nameEn: string | null
+    }
+
     const items: Array<{
       id: string
       type: 'product' | 'supplier'
@@ -18,8 +31,8 @@ export async function GET(request: Request) {
       score: number
       price?: number
       image?: string
-      supplier?: any
-      category?: any
+      supplier?: SupplierSummary | null
+      category?: CategorySummary | null
       rating?: number
       productCount?: number
     }> = []

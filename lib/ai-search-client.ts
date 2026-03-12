@@ -1,10 +1,10 @@
-import type { Pipeline } from '@xenova/transformers'
+import type { FeatureExtractionPipeline } from '@xenova/transformers'
 
 type TransformersModule = typeof import('@xenova/transformers')
 
 let transformersModule: TransformersModule | null = null
-let embedder: Pipeline | null = null
-let embedderPromise: Promise<Pipeline> | null = null
+let embedder: FeatureExtractionPipeline | null = null
+let embedderPromise: Promise<FeatureExtractionPipeline> | null = null
 
 async function getTransformers() {
   if (typeof window === 'undefined') {
@@ -18,7 +18,7 @@ async function getTransformers() {
   return transformersModule
 }
 
-async function getEmbedder() {
+async function getEmbedder(): Promise<FeatureExtractionPipeline> {
   if (embedder) return embedder
   if (embedderPromise) return embedderPromise
 
@@ -42,6 +42,19 @@ export interface SearchableItem {
   price?: number
   rating?: number
   image?: string
+}
+
+type SearchSupplierSummary = {
+  id?: string
+  companyName?: string
+  logo?: string | null
+  verified?: boolean
+  rating?: number
+}
+
+type SearchCategorySummary = {
+  nameAr?: string | null
+  nameEn?: string | null
 }
 
 export async function embedText(text: string): Promise<number[]> {
@@ -94,8 +107,8 @@ export async function searchSemantic(
   url: string
   price?: number
   image?: string
-  supplier?: any
-  category?: any
+  supplier?: SearchSupplierSummary | null
+  category?: SearchCategorySummary | null
   rating?: number
   productCount?: number
   }>,

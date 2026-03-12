@@ -30,7 +30,20 @@ export interface SupplierListItem {
   totalProducts: number
   totalReviews: number
   totalSales: number
-  createdAt: Date
+  createdAt: string
+  user: {
+    name: string
+  }
+}
+
+export interface SuppliersApiResponse {
+  suppliers: SupplierListItem[]
+  pagination: {
+    page: number
+    limit: number
+    total: number
+    totalPages: number
+  }
 }
 
 export interface SearchableItem {
