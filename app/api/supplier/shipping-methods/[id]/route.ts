@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server'
+import { NextResponse, type NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getSessionUser } from '@/lib/session'
 import { Role } from '@/lib/prisma-enums'
@@ -12,7 +12,7 @@ async function listMethods(supplierId: string) {
   })
 }
 
-export async function PATCH(request: Request, context: { params: { id: string } }) {
+export async function PATCH(request: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
     const sameOriginError = assertSameOrigin(request)
     if (sameOriginError) {
@@ -24,7 +24,7 @@ export async function PATCH(request: Request, context: { params: { id: string } 
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
     }
 
-    const id = context.params.id
+    const { id } = await context.params
     const existing = await prisma.shippingMethod.findFirst({
       where: { id, supplierId: user.supplier.id },
     })
@@ -70,7 +70,7 @@ export async function PATCH(request: Request, context: { params: { id: string } 
   }
 }
 
-export async function DELETE(request: Request, context: { params: { id: string } }) {
+export async function DELETE(request: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
     const sameOriginError = assertSameOrigin(request)
     if (sameOriginError) {
@@ -82,7 +82,7 @@ export async function DELETE(request: Request, context: { params: { id: string }
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
     }
 
-    const id = context.params.id
+    const { id } = await context.params
     const existing = await prisma.shippingMethod.findFirst({
       where: { id, supplierId: user.supplier.id },
     })
