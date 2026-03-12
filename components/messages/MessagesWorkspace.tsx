@@ -128,7 +128,11 @@ export default function MessagesWorkspace({ currentUser }: MessagesWorkspaceProp
   const [initialMessage, setInitialMessage] = useState('')
 
   const endRef = useRef<HTMLDivElement | null>(null)
+  const scrollRef = useRef<HTMLDivElement | null>(null)
   const fileRef = useRef<HTMLInputElement | null>(null)
+  const messagesRef = useRef<ChatMessage[]>([])
+  const shouldStickToBottomRef = useRef(true)
+  const pendingAutoScrollRef = useRef(false)
 
   const selectedConversation = useMemo(
     () => conversations.find((item) => item.id === selectedConversationId) ?? null,
@@ -175,8 +179,9 @@ export default function MessagesWorkspace({ currentUser }: MessagesWorkspaceProp
   }, [isArabic, language])
 
   const loadMessages = useCallback(
-    async (conversationId: string) => {
-      setMessagesLoading(true)
+    async (conversationId: string, options?: { silent?: boolean }) => {
+      const silent = options?.silent ?? false
+      if (!silent) setMessagesLoading(true)
       try {
         const response = await fetch(`/api/messages/conversations/${conversationId}/messages?limit=200`, {
           cache: 'no-store',
@@ -187,14 +192,26 @@ export default function MessagesWorkspace({ currentUser }: MessagesWorkspaceProp
           throw new Error(result.error ?? (isArabic ? 'تعذر تحميل الرسائل' : 'Failed to load messages'))
         }
 
-        setMessages(result.data ?? [])
+        const next = result.data ?? []
+        const prev = messagesRef.current
+        const prevLastId = prev[prev.length - 1]?.id
+        const nextLastId = next[next.length - 1]?.id
+        const changed = prev.length !== next.length || prevLastId !== nextLastId
+
+        if (changed) {
+          messagesRef.current = next
+          setMessages(next)
+        }
+
         setConversations((prev) =>
           prev.map((item) => (item.id === conversationId ? { ...item, unreadCount: 0 } : item)),
         )
       } catch (error) {
-        toast.error(error instanceof Error ? error.message : isArabic ? 'فشل تحميل الرسائل' : 'Failed to load messages')
+        if (!silent) {
+          toast.error(error instanceof Error ? error.message : isArabic ? 'فشل تحميل الرسائل' : 'Failed to load messages')
+        }
       } finally {
-        setMessagesLoading(false)
+        if (!silent) setMessagesLoading(false)
       }
     },
     [isArabic, language],
@@ -230,11 +247,14 @@ export default function MessagesWorkspace({ currentUser }: MessagesWorkspaceProp
   useEffect(() => {
     if (!selectedConversationId) {
       setMessages([])
+      messagesRef.current = []
       return
     }
+    setMessages([])
+    messagesRef.current = []
     void loadMessages(selectedConversationId)
     const interval = setInterval(() => {
-      void loadMessages(selectedConversationId)
+      void loadMessages(selectedConversationId, { silent: true })
     }, 6000)
     return () => clearInterval(interval)
   }, [selectedConversationId, loadMessages])
@@ -248,7 +268,24 @@ export default function MessagesWorkspace({ currentUser }: MessagesWorkspaceProp
   }, [sidebarTab, loadContacts])
 
   useEffect(() => {
-    endRef.current?.scrollIntoView({ behavior: 'smooth' })
+    const container = scrollRef.current
+    if (!container) return
+    const handleScroll = () => {
+      const threshold = 80
+      const atBottom = container.scrollHeight - container.scrollTop - container.clientHeight <= threshold
+      shouldStickToBottomRef.current = atBottom
+    }
+    handleScroll()
+    container.addEventListener('scroll', handleScroll)
+    return () => container.removeEventListener('scroll', handleScroll)
+  }, [selectedConversationId])
+
+  useEffect(() => {
+    if (!messages.length) return
+    if (pendingAutoScrollRef.current || shouldStickToBottomRef.current) {
+      endRef.current?.scrollIntoView({ behavior: pendingAutoScrollRef.current ? 'smooth' : 'auto' })
+    }
+    pendingAutoScrollRef.current = false
   }, [messages])
 
   const createConversation = async (participantUserId: string) => {
@@ -315,7 +352,12 @@ export default function MessagesWorkspace({ currentUser }: MessagesWorkspaceProp
       const created = result.data
       setComposerText('')
       setDraftAttachments([])
-      setMessages((prev) => [...prev, created])
+      pendingAutoScrollRef.current = true
+      setMessages((prev) => {
+        const next = [...prev, created]
+        messagesRef.current = next
+        return next
+      })
       setConversations((prev) =>
         sortConversations(
           prev.map((item) =>
@@ -586,11 +628,16 @@ export default function MessagesWorkspace({ currentUser }: MessagesWorkspaceProp
                 </p>
               </header>
 
-              <div className="message-scroll flex-1 space-y-3 overflow-auto rounded-xl border border-app bg-[color-mix(in_oklab,var(--app-surface)_92%,transparent)] p-3">
-                {messagesLoading ? (
-                  <p className="text-sm text-muted">{isArabic ? 'جاري تحميل الرسائل...' : 'Loading messages...'}</p>
-                ) : messages.length === 0 ? (
-                  <p className="text-sm text-muted">{isArabic ? 'ابدأ الرسالة الأولى الآن.' : 'Send the first message now.'}</p>
+              <div
+                ref={scrollRef}
+                className="message-scroll flex-1 space-y-3 overflow-auto rounded-xl border border-app bg-[color-mix(in_oklab,var(--app-surface)_92%,transparent)] p-3"
+              >
+                {messages.length === 0 ? (
+                  messagesLoading ? (
+                    <p className="text-sm text-muted">{isArabic ? 'جاري تحميل الرسائل...' : 'Loading messages...'}</p>
+                  ) : (
+                    <p className="text-sm text-muted">{isArabic ? 'ابدأ الرسالة الأولى الآن.' : 'Send the first message now.'}</p>
+                  )
                 ) : (
                   messages.map((message) => {
                     const own = message.sender.id === currentUser.id

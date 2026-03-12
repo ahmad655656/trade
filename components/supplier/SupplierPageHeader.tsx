@@ -1,6 +1,6 @@
 ﻿'use client'
 
-import { BellIcon, FunnelIcon, MagnifyingGlassIcon, QuestionMarkCircleIcon } from '@heroicons/react/24/outline'
+import type { ReactNode } from 'react'
 import { useUi } from '@/components/providers/UiProvider'
 
 type SupplierPageHeaderProps = {
@@ -8,7 +8,7 @@ type SupplierPageHeaderProps = {
   titleEn: string
   subtitleAr: string
   subtitleEn: string
-  onHelp?: () => void
+  actions?: ReactNode
 }
 
 export default function SupplierPageHeader({
@@ -16,7 +16,7 @@ export default function SupplierPageHeader({
   titleEn,
   subtitleAr,
   subtitleEn,
-  onHelp,
+  actions,
 }: SupplierPageHeaderProps) {
   const { language } = useUi()
 
@@ -28,29 +28,7 @@ export default function SupplierPageHeader({
           <p className="mt-1 text-sm text-muted">{language === 'ar' ? subtitleAr : subtitleEn}</p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="relative min-w-72 flex-1">
-            <MagnifyingGlassIcon className="pointer-events-none absolute start-3 top-2.5 h-4 w-4 text-muted" />
-            <input
-              placeholder={language === 'ar' ? 'بحث عام: منتجات، طلبات، عملاء' : 'Global search: products, orders, customers'}
-              className="input-pro ps-9"
-            />
-          </div>
-          <button className="btn-secondary !rounded-lg !px-3 !py-2 text-sm">
-            <FunnelIcon className="h-4 w-4" />
-            <span>{language === 'ar' ? 'فلاتر محفوظة' : 'Saved filters'}</span>
-          </button>
-          <button className="btn-secondary !rounded-lg !px-3 !py-2 text-sm" title={language === 'ar' ? 'الإشعارات' : 'Notifications'}>
-            <BellIcon className="h-4 w-4" />
-          </button>
-          <button
-            className="btn-secondary !rounded-lg !px-3 !py-2 text-sm"
-            onClick={onHelp}
-            title={language === 'ar' ? 'مساعدة' : 'Help'}
-          >
-            <QuestionMarkCircleIcon className="h-4 w-4" />
-          </button>
-        </div>
+        {actions ? <div className="flex flex-wrap items-center gap-2">{actions}</div> : null}
       </div>
     </section>
   )

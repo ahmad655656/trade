@@ -1,15 +1,31 @@
 'use client'
 
 import Link from 'next/link'
+import type { ComponentType, SVGProps } from 'react'
 import { useEffect, useMemo, useState } from 'react'
 import {
-  BoltIcon,
-  ChartBarSquareIcon,
-  CheckBadgeIcon,
-  ChatBubbleLeftRightIcon,
+  ArrowUpRightIcon,
+  BuildingStorefrontIcon,
+  CheckCircleIcon,
   ShieldCheckIcon,
+  UserGroupIcon,
 } from '@heroicons/react/24/outline'
 import { useUi } from '@/components/providers/UiProvider'
+
+type RoleCard = {
+  key: string
+  titleKey: string
+  descKey: string
+  icon: ComponentType<SVGProps<SVGSVGElement>>
+}
+
+type CtaCard = {
+  href: string
+  arTitle: string
+  enTitle: string
+  arDesc: string
+  enDesc: string
+}
 
 type UserRole = 'ADMIN' | 'SUPPLIER' | 'TRADER'
 
@@ -20,148 +36,209 @@ type MeResponse = {
   }
 }
 
+const roleCards: RoleCard[] = [
+  {
+    key: 'admin',
+    titleKey: 'home.adminTitle',
+    descKey: 'home.adminDesc',
+    icon: ShieldCheckIcon,
+  },
+  {
+    key: 'supplier',
+    titleKey: 'home.supplierTitle',
+    descKey: 'home.supplierDesc',
+    icon: BuildingStorefrontIcon,
+  },
+  {
+    key: 'trader',
+    titleKey: 'home.traderTitle',
+    descKey: 'home.traderDesc',
+    icon: UserGroupIcon,
+  },
+]
+
+const highlights = [
+  {
+    id: 'secure',
+    ar: 'مصادقة قوية وصلاحيات دقيقة لكل دور.',
+    en: 'Strong authentication and granular permissions for every role.',
+  },
+  {
+    id: 'workflow',
+    ar: 'تدفق عمل واضح للطلبات والمخزون والمدفوعات.',
+    en: 'Clear workflows for orders, inventory, and payments.',
+  },
+  {
+    id: 'engagement',
+    ar: 'رسائل وتنبيهات فورية لتسريع القرارات.',
+    en: 'Instant messaging and alerts to speed up decisions.',
+  },
+]
+
+const ctaCards: CtaCard[] = [
+  {
+    href: '/products',
+    arTitle: 'تصفح المنتجات',
+    enTitle: 'Browse products',
+    arDesc: 'اطلع على المنتجات المنشورة من الموردين.',
+    enDesc: 'Explore published products from suppliers.',
+  },
+  {
+    href: '/suppliers',
+    arTitle: 'اكتشف الموردين',
+    enTitle: 'Discover suppliers',
+    arDesc: 'ابحث عن أفضل الموردين حسب التقييم.',
+    enDesc: 'Find top-rated suppliers and partners.',
+  },
+  {
+    href: '/about',
+    arTitle: 'تعرف على المنصة',
+    enTitle: 'Learn about the platform',
+    arDesc: 'لماذا صممت هذه المنصة وكيف تعمل.',
+    enDesc: 'Why the platform was built and how it works.',
+  },
+]
+
 export default function HomePage() {
   const { t, language } = useUi()
   const isArabic = language === 'ar'
-  const [loading, setLoading] = useState(true)
-  const [isLoggedIn, setIsLoggedIn] = useState(false)
+  const [authLoading, setAuthLoading] = useState(true)
   const [userRole, setUserRole] = useState<UserRole | null>(null)
 
   useEffect(() => {
+    let mounted = true
+
     const checkAuth = async () => {
       try {
         const response = await fetch('/api/auth/me', { cache: 'no-store' })
+        if (!mounted) return
         if (!response.ok) {
-          setIsLoggedIn(false)
           setUserRole(null)
           return
         }
 
         const result: MeResponse = await response.json()
         if (result.success && result.data) {
-          setIsLoggedIn(true)
           setUserRole(result.data.role)
         } else {
-          setIsLoggedIn(false)
           setUserRole(null)
         }
       } catch {
-        setIsLoggedIn(false)
-        setUserRole(null)
+        if (mounted) setUserRole(null)
       } finally {
-        setLoading(false)
+        if (mounted) setAuthLoading(false)
       }
     }
 
     void checkAuth()
+    return () => {
+      mounted = false
+    }
   }, [])
 
   const dashboardHref = useMemo(() => {
     if (userRole === 'ADMIN') return '/dashboard/admin'
     if (userRole === 'SUPPLIER') return '/dashboard/supplier'
+    if (userRole === 'TRADER') return '/dashboard/trader'
     return '/dashboard/trader'
   }, [userRole])
 
   return (
-    <div className="space-y-8">
-      <section className="relative overflow-hidden rounded-3xl border border-app bg-surface p-6 md:p-10">
-        <div className="pointer-events-none absolute -top-24 end-0 h-64 w-64 rounded-full bg-[color-mix(in_oklab,var(--app-primary)_22%,transparent)] blur-3xl" />
-        <div className="pointer-events-none absolute -bottom-20 start-0 h-64 w-64 rounded-full bg-[color-mix(in_oklab,var(--app-primary)_12%,transparent)] blur-3xl" />
+    <div className="space-y-12">
+      <section className="card-pro relative overflow-hidden p-8 md:p-10">
+        <div className="pointer-events-none absolute inset-0 opacity-30">
+          <div className="absolute -top-28 -end-28 h-72 w-72 rounded-full bg-[color-mix(in_oklab,var(--app-primary)_18%,transparent)] blur-3xl" />
+          <div className="absolute -bottom-28 -start-28 h-72 w-72 rounded-full bg-[color-mix(in_oklab,#22c55e_14%,transparent)] blur-3xl" />
+        </div>
 
-        <div className="relative grid gap-8 lg:grid-cols-[1.1fr_0.9fr]">
+        <div className="relative grid gap-10 lg:grid-cols-[1.1fr_0.9fr] items-center">
           <div className="space-y-5">
-            <p className="inline-flex items-center gap-2 rounded-full border border-app bg-[color-mix(in_oklab,var(--app-surface)_88%,transparent)] px-3 py-1 text-xs text-muted">
-              <BoltIcon className="h-4 w-4" />
-              {isArabic ? 'منصة تجارة B2B متقدمة' : 'Advanced B2B marketplace'}
+            <span className="inline-flex items-center rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-muted">
+              {isArabic ? 'منصة تجارة B2B' : 'B2B Marketplace'}
+            </span>
+            <h1 className="text-3xl font-bold leading-tight text-app md:text-4xl lg:text-5xl">
+              {t('home.title')}
+            </h1>
+            <p className="max-w-xl text-base leading-relaxed text-muted">
+              {t('home.description')}
             </p>
-            <h1 className="text-3xl font-bold leading-tight text-app md:text-5xl">{t('home.title')}</h1>
-            <p className="max-w-2xl text-sm text-muted md:text-base">{t('home.description')}</p>
 
-            {!loading && (
+            {!authLoading && (
               <div className="flex flex-wrap gap-3">
-                {isLoggedIn ? (
+                {userRole ? (
                   <>
-                    <Link href={dashboardHref} className="btn-primary text-base">
+                    <Link href={dashboardHref} className="btn-primary">
                       {t('nav.dashboard')}
                     </Link>
-                    <Link href="/messages" className="btn-secondary text-base">
-                      <ChatBubbleLeftRightIcon className="h-4 w-4" />
-                      {isArabic ? 'الرسائل' : 'Messages'}
+                    <Link href="/products" className="btn-secondary">
+                      {t('nav.products')}
                     </Link>
                   </>
                 ) : (
                   <>
-                    <Link href="/register" className="btn-primary text-base">
+                    <Link href="/register" className="btn-primary">
                       {t('home.create')}
                     </Link>
-                    <Link href="/login" className="btn-secondary text-base">
+                    <Link href="/login" className="btn-secondary">
                       {t('home.login')}
                     </Link>
                   </>
                 )}
               </div>
             )}
+
+            <div className="grid gap-2 text-xs text-muted">
+              {highlights.map((item) => (
+                <div key={item.id} className="flex items-center gap-2">
+                  <CheckCircleIcon className="h-4 w-4 text-[var(--app-primary)]" />
+                  <span>{isArabic ? item.ar : item.en}</span>
+                </div>
+              ))}
+            </div>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
-            <div className="card-pro animate-fade-in-up rounded-2xl p-4 [animation-delay:70ms]">
-              <p className="text-xs text-muted">{isArabic ? 'أمان وصلاحيات' : 'Security and permissions'}</p>
-              <p className="mt-1 text-lg font-semibold text-app">{isArabic ? 'تحكم كامل لكل دور' : 'Full role-based control'}</p>
-            </div>
-            <div className="card-pro animate-fade-in-up rounded-2xl p-4 [animation-delay:140ms]">
-              <p className="text-xs text-muted">{isArabic ? 'تواصل' : 'Communication'}</p>
-              <p className="mt-1 text-lg font-semibold text-app">{isArabic ? 'مراسلات مباشرة بين الجميع' : 'Direct messaging for everyone'}</p>
-            </div>
-            <div className="card-pro animate-fade-in-up rounded-2xl p-4 [animation-delay:210ms] sm:col-span-2 lg:col-span-1">
-              <p className="text-xs text-muted">{isArabic ? 'تشغيل يومي' : 'Daily operations'}</p>
-              <p className="mt-1 text-lg font-semibold text-app">{isArabic ? 'طلبات ومدفوعات ونزاعات في مكان واحد' : 'Orders, payments, and disputes in one workspace'}</p>
-            </div>
+          <div className="grid gap-4">
+            {roleCards.map((role) => {
+              const Icon = role.icon
+              return (
+                <div
+                  key={role.key}
+                  className="card-pro rounded-2xl p-5 transition duration-300 hover:shadow-lg hover:shadow-[var(--app-primary)]/10"
+                >
+                  <div className="flex items-start gap-4">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[color-mix(in_oklab,var(--app-primary)_18%,transparent)] text-[var(--app-primary)]">
+                      <Icon className="h-6 w-6" />
+                    </div>
+                    <div className="space-y-1">
+                      <h3 className="text-base font-bold text-app">{t(role.titleKey)}</h3>
+                      <p className="text-sm text-muted">{t(role.descKey)}</p>
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
           </div>
         </div>
       </section>
 
       <section className="grid gap-4 md:grid-cols-3">
-        <article className="card-pro rounded-2xl p-5 transition hover:-translate-y-1 hover:shadow-md">
-          <div className="mb-3 inline-flex rounded-xl bg-emerald-500/15 p-2 text-emerald-500">
-            <ShieldCheckIcon className="h-5 w-5" />
-          </div>
-          <h2 className="text-lg font-semibold text-app">{t('home.adminTitle')}</h2>
-          <p className="mt-2 text-sm text-muted">{t('home.adminDesc')}</p>
-        </article>
-        <article className="card-pro rounded-2xl p-5 transition hover:-translate-y-1 hover:shadow-md">
-          <div className="mb-3 inline-flex rounded-xl bg-sky-500/15 p-2 text-sky-500">
-            <ChartBarSquareIcon className="h-5 w-5" />
-          </div>
-          <h2 className="text-lg font-semibold text-app">{t('home.supplierTitle')}</h2>
-          <p className="mt-2 text-sm text-muted">{t('home.supplierDesc')}</p>
-        </article>
-        <article className="card-pro rounded-2xl p-5 transition hover:-translate-y-1 hover:shadow-md">
-          <div className="mb-3 inline-flex rounded-xl bg-amber-500/15 p-2 text-amber-500">
-            <CheckBadgeIcon className="h-5 w-5" />
-          </div>
-          <h2 className="text-lg font-semibold text-app">{t('home.traderTitle')}</h2>
-          <p className="mt-2 text-sm text-muted">{t('home.traderDesc')}</p>
-        </article>
-      </section>
-
-      <section className="card-pro rounded-2xl p-5">
-        <h3 className="text-lg font-semibold text-app">
-          {isArabic ? 'طريقة العمل خلال 3 خطوات' : 'How it works in 3 steps'}
-        </h3>
-        <div className="mt-4 grid gap-3 md:grid-cols-3">
-          <div className="rounded-xl border border-app p-3">
-            <p className="text-xs text-muted">{isArabic ? 'الخطوة 1' : 'Step 1'}</p>
-            <p className="mt-1 text-sm font-semibold text-app">{isArabic ? 'سجل بالحساب المناسب' : 'Register with your role'}</p>
-          </div>
-          <div className="rounded-xl border border-app p-3">
-            <p className="text-xs text-muted">{isArabic ? 'الخطوة 2' : 'Step 2'}</p>
-            <p className="mt-1 text-sm font-semibold text-app">{isArabic ? 'ابدأ التعاملات والطلبات' : 'Start orders and operations'}</p>
-          </div>
-          <div className="rounded-xl border border-app p-3">
-            <p className="text-xs text-muted">{isArabic ? 'الخطوة 3' : 'Step 3'}</p>
-            <p className="mt-1 text-sm font-semibold text-app">{isArabic ? 'تابع كل شيء عبر الرسائل والإشعارات' : 'Track everything via messages and notifications'}</p>
-          </div>
-        </div>
+        {ctaCards.map((card) => (
+          <Link
+            key={card.href}
+            href={card.href}
+            className="card-pro group rounded-2xl p-6 transition duration-300 hover:shadow-lg hover:shadow-[var(--app-primary)]/10"
+          >
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-bold text-app">
+                {isArabic ? card.arTitle : card.enTitle}
+              </h2>
+              <ArrowUpRightIcon className="h-4 w-4 text-muted transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-[var(--app-primary)]" />
+            </div>
+            <p className="mt-2 text-sm text-muted">
+              {isArabic ? card.arDesc : card.enDesc}
+            </p>
+          </Link>
+        ))}
       </section>
     </div>
   )

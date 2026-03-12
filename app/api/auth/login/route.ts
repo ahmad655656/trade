@@ -26,6 +26,7 @@ const loginUserBaseSelect = {
   name: true,
   role: true,
   status: true,
+  verified: true,
   supplier: true,
   trader: true,
   admin: true,
@@ -38,7 +39,7 @@ const loginUserExtendedSelect = {
 } satisfies Prisma.UserSelect
 
 type LoginUserBaseRecord = Prisma.UserGetPayload<{ select: typeof loginUserBaseSelect }>
-type LoginUser = LoginUserBaseRecord & { twoFactorAuth: boolean; twoFactorSecret: string | null }
+type LoginUser = LoginUserBaseRecord & { twoFactorAuth: boolean; twoFactorSecret: string | null; verified: boolean }
 
 async function findLoginUserByEmail(email: string): Promise<{
   user: LoginUser | null
@@ -55,6 +56,7 @@ async function findLoginUserByEmail(email: string): Promise<{
             ...user,
             twoFactorAuth: user.twoFactorAuth,
             twoFactorSecret: user.twoFactorSecret,
+            verified: user.verified,
           }
         : null,
       supportsAdvancedAuthColumns: true,
@@ -73,6 +75,7 @@ async function findLoginUserByEmail(email: string): Promise<{
             ...fallbackUser,
             twoFactorAuth: false,
             twoFactorSecret: null,
+            verified: fallbackUser.verified ?? false,
           }
         : null,
       supportsAdvancedAuthColumns: false,
@@ -137,6 +140,8 @@ export async function POST(request: Request) {
       })
       return NextResponse.json({ success: false, error: 'Invalid email or password' }, { status: 401 })
     }
+
+    // Auto-verified - no check needed
 
     if (user.status !== UserStatus.ACTIVE) {
       await registerLoginAttempt({
@@ -243,6 +248,7 @@ export async function POST(request: Request) {
           name: user.name,
           role: user.role,
           status: user.status,
+          verified: user.verified,
           twoFactorAuth: user.twoFactorAuth,
         },
       },

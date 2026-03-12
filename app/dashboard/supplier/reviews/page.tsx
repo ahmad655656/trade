@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import toast from 'react-hot-toast'
-import { SupplierDonutChart } from '@/components/supplier/SupplierCharts'
 import SupplierPageHeader from '@/components/supplier/SupplierPageHeader'
 import { useUi } from '@/components/providers/UiProvider'
 
@@ -48,6 +47,7 @@ export default function SupplierReviewsPage() {
     { label: '2★', value: reviews.filter((r) => r.rating === 2).length },
     { label: '1★', value: reviews.filter((r) => r.rating === 1).length },
   ]
+  const totalRatings = reviews.length || 1
 
   return (
     <div className="space-y-6">
@@ -67,36 +67,83 @@ export default function SupplierReviewsPage() {
 
       <section className="grid gap-4 xl:grid-cols-3">
         <article className="card-pro rounded-xl p-4 xl:col-span-2">
-          <div className="mb-4 flex items-center justify-between">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <h2 className="text-lg font-semibold text-app">{language === 'ar' ? 'قائمة التقييمات' : 'Reviews list'}</h2>
-            <label className="flex items-center gap-2 text-sm text-muted">
-              <input type="checkbox" checked={showOnlyPendingReply} onChange={(e) => setShowOnlyPendingReply(e.target.checked)} />
+            <label className="flex items-center gap-2 text-xs text-muted">
+              <input
+                type="checkbox"
+                checked={showOnlyPendingReply}
+                onChange={(e) => setShowOnlyPendingReply(e.target.checked)}
+              />
               {language === 'ar' ? 'غير مردود عليها فقط' : 'Pending replies only'}
             </label>
           </div>
 
           <div className="space-y-3">
-            {visibleReviews.map((review) => (
-              <article key={review.id} className="rounded-lg border border-app p-3">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div>
-                    <p className="font-medium text-app">{review.fromUser.name}</p>
-                    <p className="text-xs text-muted">{language === 'ar' ? review.toProduct?.nameAr || review.toProduct?.nameEn || '-' : review.toProduct?.nameEn || review.toProduct?.nameAr || '-'}</p>
-                  </div>
-                  <p className="text-sm text-amber-500">{'★'.repeat(review.rating)}</p>
-                </div>
+            {visibleReviews.map((review) => {
+              const reviewerInitial = review.fromUser.name?.charAt(0)?.toUpperCase() ?? 'U'
+              const productName = language === 'ar'
+                ? review.toProduct?.nameAr || review.toProduct?.nameEn || '-'
+                : review.toProduct?.nameEn || review.toProduct?.nameAr || '-'
 
-                <p className="mt-2 text-sm text-muted">{review.comment || '-'}</p>
-                <p className="mt-1 text-xs text-muted">{new Date(review.createdAt).toLocaleDateString()}</p>
-              </article>
-            ))}
+              return (
+                <article key={review.id} className="rounded-xl border border-app/70 bg-[color-mix(in_oklab,var(--app-surface)_94%,transparent)] p-4">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[color-mix(in_oklab,var(--app-primary)_18%,transparent)] text-sm font-bold text-[var(--app-primary)]">
+                        {reviewerInitial}
+                      </div>
+                      <div>
+                        <p className="font-semibold text-app">{review.fromUser.name}</p>
+                        <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted">
+                          <span className="rounded-full border border-app/60 px-2 py-0.5">{productName}</span>
+                          <span>{new Date(review.createdAt).toLocaleDateString()}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-amber-500">{'★'.repeat(review.rating)}</span>
+                      {!review.reply ? (
+                        <span className="rounded-full bg-amber-500/10 px-2 py-0.5 text-[11px] font-semibold text-amber-600">
+                          {language === 'ar' ? 'بانتظار رد' : 'Pending reply'}
+                        </span>
+                      ) : (
+                        <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[11px] font-semibold text-emerald-600">
+                          {language === 'ar' ? 'تم الرد' : 'Replied'}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  <p className="mt-3 text-sm text-muted">{review.comment || '-'}</p>
+                </article>
+              )
+            })}
           </div>
         </article>
 
         <article className="card-pro rounded-xl p-4">
-          <h2 className="text-lg font-semibold text-app">{language === 'ar' ? 'توزيع التقييمات' : 'Rating distribution'}</h2>
-          <div className="mt-4">
-            <SupplierDonutChart data={ratingDistribution} />
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-app">{language === 'ar' ? 'توزيع التقييمات' : 'Rating distribution'}</h2>
+            <span className="text-xs text-muted">{language === 'ar' ? `${reviews.length} تقييم` : `${reviews.length} ratings`}</span>
+          </div>
+
+          <div className="mt-4 space-y-3">
+            {ratingDistribution.map((item, idx) => {
+              const percent = Math.round((item.value / totalRatings) * 100)
+              const color = ['bg-emerald-500', 'bg-sky-500', 'bg-amber-500', 'bg-orange-500', 'bg-rose-500'][idx] || 'bg-[var(--app-primary)]'
+              return (
+                <div key={item.label} className="space-y-1">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-app">{item.label}</span>
+                    <span className="text-xs text-muted">{item.value}</span>
+                  </div>
+                  <div className="h-2 rounded-full bg-[color-mix(in_oklab,var(--app-border)_60%,transparent)]">
+                    <div className={`h-2 rounded-full ${color}`} style={{ width: `${percent}%` }} />
+                  </div>
+                </div>
+              )
+            })}
           </div>
         </article>
       </section>

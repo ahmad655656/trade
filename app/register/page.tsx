@@ -68,9 +68,13 @@ export default function RegisterPage() {
         throw new Error(result.error ?? 'Registration failed')
       }
 
-      toast.success(language === 'ar' ? 'تم إنشاء الحساب بنجاح' : 'Account created successfully')
-      if (result.data.user.role === 'SUPPLIER') router.push('/dashboard/supplier')
+      toast.success(language === 'ar' ? 'تم إنشاء الحساب وتسجيل الدخول بنجاح!' : 'Account created and logged in successfully!')
+
+      // Auto-redirect to dashboard based on role
+      const role = result.data.user.role
+      if (role === 'SUPPLIER') router.push('/dashboard/supplier')
       else router.push('/dashboard/trader')
+      
       router.refresh()
     } catch (error) {
       toast.error(error instanceof Error ? error.message : language === 'ar' ? 'فشل إنشاء الحساب' : 'Registration failed')
@@ -143,4 +147,3 @@ export default function RegisterPage() {
     </div>
   )
 }
-

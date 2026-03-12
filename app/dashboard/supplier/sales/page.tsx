@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import SupplierPageHeader from '@/components/supplier/SupplierPageHeader'
-import { SupplierDonutChart, SupplierHorizontalBars, SupplierLineChart } from '@/components/supplier/SupplierCharts'
+import { SupplierHorizontalBars, SupplierLineChart } from '@/components/supplier/SupplierCharts'
 import { useUi } from '@/components/providers/UiProvider'
 import { formatSypAmount } from '@/lib/currency'
 
@@ -18,6 +18,84 @@ type AnalyticsData = {
   topProducts: Array<{ label: string; value: number }>
   leastSelling: Array<{ label: string; value: number }>
   trendingViewed: Array<{ label: string; value: number }>
+}
+
+function CategorySalesCard({
+  items,
+  language,
+  formatAmount,
+}: {
+  items: Array<{ label: string; value: number }>
+  language: 'ar' | 'en'
+  formatAmount: (value: number) => string
+}) {
+  if (!items.length) {
+    return (
+      <p className="text-sm text-muted">
+        {language === 'ar' ? 'لا توجد بيانات حالياً' : 'No data available'}
+      </p>
+    )
+  }
+
+  const total = items.reduce((sum, item) => sum + item.value, 0) || 1
+  const palette = [
+    'bg-blue-500',
+    'bg-emerald-500',
+    'bg-amber-500',
+    'bg-rose-500',
+    'bg-violet-500',
+    'bg-sky-500',
+    'bg-lime-500',
+    'bg-orange-500',
+  ]
+
+  const ranked = [...items].sort((a, b) => b.value - a.value).slice(0, 8)
+
+  return (
+    <div className="space-y-4">
+      <div className="flex h-2 overflow-hidden rounded-full bg-[color-mix(in_oklab,var(--app-border)_60%,transparent)]">
+        {ranked.map((item, idx) => {
+          const width = Math.max(2, Math.round((item.value / total) * 100))
+          return (
+            <div
+              key={item.label}
+              className={`${palette[idx % palette.length]} h-full`}
+              style={{ width: `${width}%` }}
+            />
+          )
+        })}
+      </div>
+
+      <div className="grid gap-2">
+        {ranked.map((item, idx) => {
+          const percent = Math.round((item.value / total) * 100)
+          return (
+            <div
+              key={item.label}
+              className="rounded-xl border border-app/60 bg-[color-mix(in_oklab,var(--app-surface)_94%,transparent)] px-3 py-2"
+            >
+              <div className="flex items-center justify-between gap-2 text-sm">
+                <div className="flex items-center gap-2">
+                  <span className={`h-2.5 w-2.5 rounded-full ${palette[idx % palette.length]}`} />
+                  <span className="text-app">{item.label}</span>
+                </div>
+                <span className="text-xs text-muted">{percent}%</span>
+              </div>
+              <div className="mt-2 flex items-center justify-between text-xs text-muted">
+                <span>{formatAmount(item.value)}</span>
+                <div className="h-1.5 w-40 max-w-full overflow-hidden rounded-full bg-[color-mix(in_oklab,var(--app-border)_60%,transparent)]">
+                  <div
+                    className={`${palette[idx % palette.length]} h-full`}
+                    style={{ width: `${percent}%` }}
+                  />
+                </div>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
 }
 
 export default function SupplierSalesPage() {
@@ -66,9 +144,20 @@ export default function SupplierSalesPage() {
               </div>
             </article>
             <article className="card-pro rounded-xl p-4">
-              <h2 className="text-lg font-semibold text-app">{language === 'ar' ? 'المبيعات حسب الفئة' : 'Sales by category'}</h2>
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-semibold text-app">{language === 'ar' ? 'المبيعات حسب الفئة' : 'Sales by category'}</h2>
+                <span className="text-xs text-muted">
+                  {language === 'ar'
+                    ? `${data.categorySales.length} فئات`
+                    : `${data.categorySales.length} categories`}
+                </span>
+              </div>
               <div className="mt-4">
-                <SupplierDonutChart data={data.categorySales.length ? data.categorySales : [{ label: 'N/A', value: 1 }]} />
+                <CategorySalesCard
+                  items={data.categorySales}
+                  language={language}
+                  formatAmount={(value) => formatSypAmount(value, language)}
+                />
               </div>
             </article>
           </section>
@@ -77,14 +166,22 @@ export default function SupplierSalesPage() {
             <article className="card-pro rounded-xl p-4">
               <h2 className="text-lg font-semibold text-app">{language === 'ar' ? 'أكثر المنتجات مبيعاً' : 'Top products'}</h2>
               <div className="mt-4">
-                <SupplierHorizontalBars data={data.topProducts} />
+                {data.topProducts.length ? (
+                  <SupplierHorizontalBars data={data.topProducts} />
+                ) : (
+                  <p className="text-sm text-muted">{language === 'ar' ? 'لا توجد بيانات بعد' : 'No data yet'}</p>
+                )}
               </div>
             </article>
 
             <article className="card-pro rounded-xl p-4">
               <h2 className="text-lg font-semibold text-app">{language === 'ar' ? 'أقل المنتجات مبيعاً' : 'Least-selling products'}</h2>
               <div className="mt-4">
-                <SupplierHorizontalBars data={data.leastSelling} />
+                {data.leastSelling.length ? (
+                  <SupplierHorizontalBars data={data.leastSelling} />
+                ) : (
+                  <p className="text-sm text-muted">{language === 'ar' ? 'لا توجد بيانات بعد' : 'No data yet'}</p>
+                )}
               </div>
             </article>
           </section>
@@ -92,7 +189,11 @@ export default function SupplierSalesPage() {
           <section className="card-pro rounded-xl p-4">
             <h2 className="text-lg font-semibold text-app">{language === 'ar' ? 'المنتجات الأكثر مشاهدة' : 'Most viewed products'}</h2>
             <div className="mt-4">
-              <SupplierHorizontalBars data={data.trendingViewed} />
+              {data.trendingViewed.length ? (
+                <SupplierHorizontalBars data={data.trendingViewed} />
+              ) : (
+                <p className="text-sm text-muted">{language === 'ar' ? 'لا توجد بيانات بعد' : 'No data yet'}</p>
+              )}
             </div>
           </section>
         </>

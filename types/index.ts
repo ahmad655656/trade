@@ -1,3 +1,4 @@
+// Existing types
 export interface LoginInput {
   email: string
   password: string
@@ -19,3 +20,14 @@ export interface ApiResponse<T> {
   error?: string
   message?: string
 }
+
+export interface SupplierListItem {
+  id: string
+  companyName: string
+  logo: string | null
+  verified: boolean
+  rating: number
+  totalProducts: number
+  totalReviews: number
+  totalSales: number
+  created

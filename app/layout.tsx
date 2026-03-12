@@ -3,6 +3,7 @@ import { Cairo, Manrope } from 'next/font/google'
 import './globals.css'
 import { Toaster } from 'react-hot-toast'
 import Navbar from '@/components/layout/Navbar'
+import Footer from '@/components/layout/Footer'
 import { UiProvider } from '@/components/providers/UiProvider'
 
 const cairo = Cairo({ subsets: ['latin', 'arabic'], variable: '--font-arabic' })
@@ -20,10 +21,11 @@ export default function RootLayout({
 }) {
   return (
     <html lang="ar" dir="rtl" suppressHydrationWarning>
-      <body className={`${cairo.variable} ${manrope.variable} min-h-screen bg-app text-app antialiased`}>
+<body className={`${cairo.variable} ${manrope.variable} min-h-screen bg-app text-app antialiased`}>
         <UiProvider>
           <Navbar />
-          <main className="container mx-auto px-4 py-8">{children}</main>
+          <main className="container mx-auto px-4 py-8 min-h-[calc(100vh-200px)]">{children}</main>
+          <Footer />
           <Toaster position="top-center" />
         </UiProvider>
       </body>

@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import toast from 'react-hot-toast'
-import { ArrowDownTrayIcon, ArrowUpTrayIcon } from '@heroicons/react/24/outline'
 import SupplierPageHeader from '@/components/supplier/SupplierPageHeader'
 import { useUi } from '@/components/providers/UiProvider'
 
@@ -70,15 +69,6 @@ export default function SupplierInventoryPage() {
       />
 
       <section className="card-pro rounded-xl p-4">
-        <div className="mb-4 flex flex-wrap items-center gap-2">
-          <button className="btn-secondary !rounded-lg !px-3 !py-2 text-sm">
-            <ArrowDownTrayIcon className="h-4 w-4" /> CSV/Excel
-          </button>
-          <button className="btn-secondary !rounded-lg !px-3 !py-2 text-sm">
-            <ArrowUpTrayIcon className="h-4 w-4" /> {language === 'ar' ? 'استيراد تحديث' : 'Import updates'}
-          </button>
-        </div>
-
         <div className="overflow-x-auto">
           <table className="min-w-full text-sm">
             <thead>

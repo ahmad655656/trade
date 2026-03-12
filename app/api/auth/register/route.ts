@@ -9,6 +9,7 @@ import { detectDuplicateAccountSignals } from '@/lib/fraud'
 import { writeAuditLog } from '@/lib/audit'
 import { setAuthCookies } from '@/lib/session-cookie'
 
+
 type TxClient = Omit<typeof prisma, '$connect' | '$disconnect' | '$on' | '$transaction' | '$extends' | '$use'>
 
 export async function POST(request: Request) {
@@ -144,12 +145,13 @@ export async function POST(request: Request) {
       },
     })
 
+    // Auto-login immediately (no verification needed)
     const token = generateToken(user.id, user.role)
     await setAuthCookies(token)
 
     return NextResponse.json({
       success: true,
-      message: 'Account created successfully',
+      message: 'Account created and logged in successfully!',
       data: {
         user: {
           id: user.id,

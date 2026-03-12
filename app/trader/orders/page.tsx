@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useUi } from '@/components/providers/UiProvider'
 import { formatSypAmount } from '@/lib/currency'
 import { orderStatusLabel, paymentStatusLabel, shippingStatusLabel } from '@/lib/order-labels'
+import ReviewModal, { ReviewFormData } from '@/components/trader/ReviewModal'
 
 type Order = {
   id: string
@@ -22,13 +23,14 @@ type Order = {
     quantity: number
     price: number
     total: number
-    product: { nameAr: string | null; nameEn: string | null }
-    supplier: { user: { name: string } }
+    product: { nameAr: string | null; nameEn: string | null; id: string }
+    supplier: { id: string; user: { name: string } }
   }>
 }
 
 const tabs = ['ALL', 'ACTIVE', 'COMPLETED', 'CANCELLED'] as const
-const tabLabel = (tab: (typeof tabs)[number], language: 'ar' | 'en') => {
+
+function tabLabel(tab: (typeof tabs)[number], language: 'ar' | 'en') {
   if (tab === 'ALL') return language === 'ar' ? 'الكل' : 'All'
   if (tab === 'ACTIVE') return language === 'ar' ? 'النشطة' : 'Active'
   if (tab === 'COMPLETED') return language === 'ar' ? 'المكتملة' : 'Completed'
@@ -43,6 +45,9 @@ export default function TraderOrdersPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [submittingProof, setSubmittingProof] = useState(false)
   const [uploadingProof, setUploadingProof] = useState(false)
+  const [showReviewModal, setShowReviewModal] = useState(false)
+  const [reviewOrder, setReviewOrder] = useState<Order | null>(null)
+  const [reviewedOrders, setReviewedOrders] = useState<Set<string>>(new Set())
   const [proofForm, setProofForm] = useState({
     senderPhone: '',
     transferTo: '',
@@ -138,6 +143,31 @@ export default function TraderOrdersPage() {
     }))
   }, [selected, selectedManualPayment])
 
+  const handleReviewSubmit = async (data: ReviewFormData) => {
+    if (!reviewOrder) return
+    
+    const response = await fetch(`/api/trader/orders/${reviewOrder.id}/review`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-app-language': language,
+      },
+      body: JSON.stringify(data),
+    })
+    const result = await response.json()
+    if (!response.ok || !result.success) {
+      throw new Error(result.error || (language === 'ar' ? 'فشل إرسال التقييم' : 'Failed to submit review'))
+    }
+    
+    setReviewedOrders(prev => new Set([...prev, reviewOrder.id]))
+    alert(language === 'ar' ? '✅ تم إرسال التقييم بنجاح' : '✅ Review submitted successfully')
+  }
+
+  const openReviewModal = (order: Order) => {
+    setReviewOrder(order)
+    setShowReviewModal(true)
+  }
+
   const progressByStatus: Record<string, number> = {
     PENDING_PLATFORM_FEE_PAYMENT: 10,
     WAITING_FOR_PAYMENT_VERIFICATION: 20,
@@ -181,6 +211,14 @@ export default function TraderOrdersPage() {
                   <div className="mt-2 h-1.5 rounded bg-[var(--app-border)]">
                     <div className="h-1.5 rounded bg-[var(--app-primary)]" style={{ width: `${progressByStatus[order.status] ?? 15}%` }} />
                   </div>
+                  {reviewedOrders.has(order.id) && (
+                    <span className="mt-1 inline-flex items-center gap-1 text-xs text-emerald-600">
+                      <svg className="h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                      </svg>
+                      {language === 'ar' ? 'تم التقييم' : 'Reviewed'}
+                    </span>
+                  )}
                 </button>
               ))}
             </div>
@@ -398,37 +436,24 @@ export default function TraderOrdersPage() {
 
               {selected.status === 'ORDER_CLOSED' && (
                 <button
-                  className="btn-secondary !rounded-lg !px-3 !py-2 text-sm"
-                  onClick={async () => {
-                    if (!selected) return
-                    const ratingInput = window.prompt(language === 'ar' ? 'التقييم من 1 إلى 5' : 'Rating from 1 to 5')
-                    const rating = Number(ratingInput)
-                    if (!Number.isFinite(rating) || rating < 1 || rating > 5) return
-                    const comment = window.prompt(language === 'ar' ? 'تعليق (اختياري)' : 'Comment (optional)') || ''
-                    const response = await fetch(`/api/trader/orders/${selected.id}/review`, {
-                      method: 'POST',
-                      headers: {
-                        'Content-Type': 'application/json',
-                        'x-app-language': language,
-                      },
-                      body: JSON.stringify({
-                        rating,
-                        qualityRating: rating,
-                        deliverySpeedRating: rating,
-                        descriptionAccuracyRating: rating,
-                        communicationRating: rating,
-                        comment,
-                      }),
-                    })
-                    const result = await response.json()
-                    if (!response.ok || !result.success) {
-                      alert(result.error || (language === 'ar' ? 'فشل إرسال التقييم' : 'Failed to submit review'))
-                      return
-                    }
-                    alert(language === 'ar' ? 'تم إرسال التقييم' : 'Review submitted')
-                  }}
+                  className={`btn-secondary !rounded-lg !px-3 !py-2 text-sm ${
+                    reviewedOrders.has(selected.id) ? 'opacity-50 cursor-not-allowed' : ''
+                  }`}
+                  onClick={() => openReviewModal(selected)}
+                  disabled={reviewedOrders.has(selected.id)}
                 >
-                  {language === 'ar' ? 'تقييم المورد' : 'Rate supplier'}
+                  <span className="flex items-center gap-2">
+                    <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
+                      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                    </svg>
+                    {reviewedOrders.has(selected.id)
+                      ? language === 'ar'
+                        ? 'تم التقييم'
+                        : 'Reviewed'
+                      : language === 'ar'
+                        ? 'تقييم المورد'
+                        : 'Rate Supplier'}
+                  </span>
                 </button>
               )}
 
@@ -443,6 +468,24 @@ export default function TraderOrdersPage() {
           )}
         </article>
       </section>
+
+      {reviewOrder && (
+        <ReviewModal
+          isOpen={showReviewModal}
+          onClose={() => {
+            setShowReviewModal(false)
+            setReviewOrder(null)
+          }}
+          onSubmit={handleReviewSubmit}
+          orderNumber={reviewOrder.orderNumber}
+          supplierName={reviewOrder.items[0]?.supplier.user.name || ''}
+          productName={language === 'ar' 
+            ? reviewOrder.items[0]?.product.nameAr || reviewOrder.items[0]?.product.nameEn || ''
+            : reviewOrder.items[0]?.product.nameEn || reviewOrder.items[0]?.product.nameAr || ''
+          }
+        />
+      )}
     </div>
   )
 }
+

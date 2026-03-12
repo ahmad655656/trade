@@ -14,8 +14,6 @@ model User {
   role          Role       @default(TRADER)
   phone         String?
   avatar        String?
-  verified      Boolean    @default(false)
-  emailVerified DateTime?
   twoFactorAuth Boolean    @default(false)
   twoFactorSecret String?
   emailNotifications Boolean @default(false)

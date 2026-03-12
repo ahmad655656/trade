@@ -14,8 +14,6 @@ const sessionUserBaseSelect = {
   role: true,
   phone: true,
   avatar: true,
-  verified: true,
-  emailVerified: true,
   status: true,
   createdAt: true,
   updatedAt: true,

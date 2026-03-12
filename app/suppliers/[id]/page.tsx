@@ -85,8 +85,9 @@ export default function SupplierProfilePage({ params }: { params: Promise<{ id: 
         <p className="text-xs text-muted">{data.supplier.user.phone || '-'}</p>
       </section>
 
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
         <MetricCard labelAr="متوسط التقييم" labelEn="Average rating" value={`${data.metrics.averageRating.toFixed(2)} / 5`} />
+        <MetricCard labelAr="عدد التقييمات" labelEn="Total reviews" value={String(data.metrics.totalReviews)} />
         <MetricCard labelAr="طلبات مكتملة" labelEn="Completed orders" value={String(data.metrics.totalCompletedOrders)} />
         <MetricCard labelAr="نسبة إكمال الطلبات" labelEn="Completion rate" value={`${data.metrics.orderCompletionRate.toFixed(1)}%`} />
         <MetricCard labelAr="متوسط الشحن (يوم)" labelEn="Avg shipping (days)" value={data.metrics.averageShippingTimeDays.toFixed(1)} />
@@ -119,4 +120,3 @@ function MetricCard({ labelAr, labelEn, value }: { labelAr: string; labelEn: str
     </article>
   )
 }
-

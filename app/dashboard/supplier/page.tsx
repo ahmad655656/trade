@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import toast from 'react-hot-toast'
 import SupplierPageHeader from '@/components/supplier/SupplierPageHeader'
 import SupplierSkeleton from '@/components/supplier/SupplierSkeleton'
-import { SupplierDonutChart, SupplierHorizontalBars, SupplierLineChart } from '@/components/supplier/SupplierCharts'
+import { SupplierHorizontalBars, SupplierLineChart } from '@/components/supplier/SupplierCharts'
 import { useUi } from '@/components/providers/UiProvider'
 import { formatSypAmount } from '@/lib/currency'
 import { orderStatusLabel } from '@/lib/order-labels'
@@ -85,6 +85,46 @@ export default function SupplierDashboardPage() {
     ]
   }, [data, language])
 
+  const orderStatusItems = useMemo(() => {
+    if (!data) return []
+    const total = data.orderStatusBreakdown.reduce((sum, item) => sum + item.value, 0)
+
+    const styleMap: Record<string, { dot: string; bar: string; text: string; pill: string }> = {
+      PLATFORM_FEE_CONFIRMED: { dot: 'bg-emerald-500', bar: 'bg-emerald-500/70', text: 'text-emerald-600', pill: 'bg-emerald-500/10 text-emerald-600' },
+      SUPPLIER_PREPARING_ORDER: { dot: 'bg-amber-500', bar: 'bg-amber-500/70', text: 'text-amber-600', pill: 'bg-amber-500/10 text-amber-600' },
+      SHIPPED: { dot: 'bg-blue-500', bar: 'bg-blue-500/70', text: 'text-blue-600', pill: 'bg-blue-500/10 text-blue-600' },
+      AWAITING_DELIVERY_CONFIRMATION: { dot: 'bg-indigo-500', bar: 'bg-indigo-500/70', text: 'text-indigo-600', pill: 'bg-indigo-500/10 text-indigo-600' },
+      DELIVERED: { dot: 'bg-emerald-600', bar: 'bg-emerald-600/70', text: 'text-emerald-600', pill: 'bg-emerald-600/10 text-emerald-600' },
+      ORDER_CLOSED: { dot: 'bg-emerald-700', bar: 'bg-emerald-700/70', text: 'text-emerald-700', pill: 'bg-emerald-700/10 text-emerald-700' },
+      CANCELLED: { dot: 'bg-red-500', bar: 'bg-red-500/70', text: 'text-red-600', pill: 'bg-red-500/10 text-red-600' },
+      PAYMENT_REJECTED: { dot: 'bg-red-500', bar: 'bg-red-500/70', text: 'text-red-600', pill: 'bg-red-500/10 text-red-600' },
+      DISPUTE_OPENED: { dot: 'bg-rose-500', bar: 'bg-rose-500/70', text: 'text-rose-600', pill: 'bg-rose-500/10 text-rose-600' },
+      WAITING_FOR_PAYMENT_VERIFICATION: { dot: 'bg-slate-400', bar: 'bg-slate-400/70', text: 'text-slate-500', pill: 'bg-slate-400/10 text-slate-500' },
+      PENDING: { dot: 'bg-slate-400', bar: 'bg-slate-400/70', text: 'text-slate-500', pill: 'bg-slate-400/10 text-slate-500' },
+      CONFIRMED: { dot: 'bg-emerald-500', bar: 'bg-emerald-500/70', text: 'text-emerald-600', pill: 'bg-emerald-500/10 text-emerald-600' },
+      PROCESSING: { dot: 'bg-amber-500', bar: 'bg-amber-500/70', text: 'text-amber-600', pill: 'bg-amber-500/10 text-amber-600' },
+    }
+
+    return data.orderStatusBreakdown
+      .map((item) => {
+        const percent = total ? Math.round((item.value / total) * 100) : 0
+        const style = styleMap[item.label] ?? {
+          dot: 'bg-[var(--app-primary)]',
+          bar: 'bg-[color-mix(in_oklab,var(--app-primary)_70%,transparent)]',
+          text: 'text-[var(--app-primary)]',
+          pill: 'bg-[color-mix(in_oklab,var(--app-primary)_12%,transparent)] text-[var(--app-primary)]',
+        }
+        return {
+          key: item.label,
+          label: orderStatusLabel(item.label, language),
+          count: item.value,
+          percent,
+          ...style,
+        }
+      })
+      .sort((a, b) => b.count - a.count)
+  }, [data, language])
+
   if (loading) {
     return (
       <div className="space-y-4">
@@ -106,7 +146,6 @@ export default function SupplierDashboardPage() {
         titleEn="Dashboard"
         subtitleAr="نظرة فورية على الأداء، الطلبات، المخزون والتقييمات"
         subtitleEn="Instant visibility on performance, orders, stock, and reviews"
-        onHelp={() => toast(language === 'ar' ? 'سيتم إضافة الفيديوهات التعليمية قريباً' : 'Tutorial videos will be added soon')}
       />
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
@@ -127,10 +166,39 @@ export default function SupplierDashboardPage() {
         </article>
 
         <article className="card-pro rounded-xl p-4">
-          <h2 className="text-lg font-semibold text-app">{language === 'ar' ? 'حالة الطلبات' : 'Order status split'}</h2>
-          <div className="mt-4">
-            <SupplierDonutChart data={data.orderStatusBreakdown} />
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-app">{language === 'ar' ? 'حالة الطلبات' : 'Order status'}</h2>
+            <span className="text-xs text-muted">
+              {language === 'ar' ? `الإجمالي: ${orderStatusItems.reduce((sum, item) => sum + item.count, 0)}` : `Total: ${orderStatusItems.reduce((sum, item) => sum + item.count, 0)}`}
+            </span>
           </div>
+
+          {orderStatusItems.length ? (
+            <div className="mt-4 space-y-4">
+              <div className="flex h-2 overflow-hidden rounded-full bg-[color-mix(in_oklab,var(--app-border)_60%,transparent)]">
+                {orderStatusItems.map((item) => (
+                  <div key={item.key} className={item.bar} style={{ width: `${item.percent}%` }} />
+                ))}
+              </div>
+
+              <div className="grid gap-2">
+                {orderStatusItems.map((item) => (
+                  <div key={item.key} className="flex items-center justify-between rounded-lg border border-app/60 bg-[color-mix(in_oklab,var(--app-surface)_92%,transparent)] px-3 py-2 text-sm">
+                    <div className="flex items-center gap-2">
+                      <span className={`h-2.5 w-2.5 rounded-full ${item.dot}`} />
+                      <span className="text-app">{item.label}</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs text-muted">{item.percent}%</span>
+                      <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${item.pill}`}>{item.count}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <p className="mt-4 text-sm text-muted">{language === 'ar' ? 'لا توجد بيانات حالياً' : 'No data available'}</p>
+          )}
         </article>
       </section>
 
