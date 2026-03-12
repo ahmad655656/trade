@@ -45,15 +45,8 @@ export default function LoginPage() {
 
       const result = await response.json()
       if (!response.ok) {
-        // Professional handling for unverified accounts
-        if (result.error?.includes('verify') || result.error?.includes('email')) {
-          toast.error(
-            language === 'ar' 
-              ? 'يرجى تفعيل بريدك الإلكتروني أولاً. تحقق من البريد الوارد أو السبام.'
-              : 'Please verify your email first. Check your inbox or spam folder.'
-          )
-          return
-        }
+// Removed verification error handling - all accounts auto-active
+
         throw new Error(result.error ?? 'Login failed')
       }
 

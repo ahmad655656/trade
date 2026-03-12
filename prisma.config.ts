@@ -7,7 +7,8 @@ export default defineConfig({
   migrations: {
     path: "prisma/migrations",
   },
-  datasource: {
-    url: "postgresql://neondb_owner:npg_glQHR5T1cdrA@ep-misty-mouse-a4que6i5.us-east-1.aws.neon.tech/neondb?sslmode=require&connect_timeout=30",
+datasource: {
+    url: process.env.DATABASE_URL || "postgresql://neondb_owner:npg_glQHR5T1cdrA@ep-misty-mouse-a4que6i5.us-east-1.aws.neon.tech/neondb?sslmode=require&connect_timeout=30",
   },
+
 });
