@@ -2,17 +2,11 @@
 Status: 🔄 In Progress
 
 ## Problem
-**ACTUAL TS ERROR FOUND** (local npm run build):
+**TS ERRORS RESOLVED (2):**
+1. ✅ FIXED: app/api/uploads/product-image/route.ts - unknown error type guard
+2. ✅ FIXED: app/suppliers/[id]/page.tsx - Added `import Link from 'next/link'`
 
-```
-./app/api/uploads/product-image/route.ts:50:32
-Type error: 'error' is of type 'unknown'.
-
-  48 |     console.error('Product image upload failed:', error)
-  49 |     return NextResponse.json(
-> 50 |       { success: false, error: error.message || 'Upload failed' },
-     |X^
-```
+**Vercel Log:** Confirms image upload fix worked (now Prisma 7.5.0, no upload error), hit next Link import issue.
 
 **Old issue** (SearchableItem price) was already fixed per TODO-Deploy-Fix.md
 

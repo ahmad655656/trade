@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { use, useEffect, useState } from 'react'
 import { useUi } from '@/components/providers/UiProvider'
 import { formatSypAmount } from '@/lib/currency'
