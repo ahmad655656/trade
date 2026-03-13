@@ -1,4 +1,4 @@
-import { v2 as cloudinary } from 'cloudinary';
+import { v2 as cloudinary, UploadApiErrorResponse, UploadApiResponse } from 'cloudinary';
 import fs from 'fs/promises';
 import path from 'path';
 import crypto from 'crypto';
@@ -22,7 +22,7 @@ async function localUploadBuffer(buffer: Buffer, public_id?: string, folder = 't
 // Cloudinary upload (existing)
 async function cloudinaryUpload(buffer: Buffer, public_id?: string, folder = 'trade/products'): Promise<string> {
   return new Promise((resolve, reject) => {
-    const cb = (error, result) => {
+    const cb = (error: UploadApiErrorResponse | undefined, result: UploadApiResponse | undefined) => {
       if (error) reject(error);
       else if (result?.secure_url) resolve(result.secure_url);
       else reject(new Error('Upload failed'));
