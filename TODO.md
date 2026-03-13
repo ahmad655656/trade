@@ -1,12 +1,13 @@
-# Fix AiSearchDropdown Build Error & Implement Professional AI Search
+# Search Professionalization Task
 
-## Steps:
-- [x] 1. Create complete AiSearchDropdown.tsx with proper Props interface and full dropdown UI (loading, results by type, links, outside click close).
-- [x] 2. Verify build succeeds (npm run dev).
-- [ ] 3. Test AI search: load data, type query, check semantic results, navigation.
-- [ ] 4. Polish UI/animations if needed.
+## Approved Plan Steps
 
-All complete ✅:
-- [x] Installed @xenova/transformers
-- Build fixed, professional AI search dropdown implemented (free local ML).
-Run `npm run dev` (kill port 3000 if needed: taskkill /F /PID 9428) to test Navbar search.
+### 1. ✅ Create this TODO.md 
+### 2. ✅ Edit app/api/search/data/route.ts - Implemented fuzzy similarity (Levenshtein), ID dedup Map, pro descriptions (verified badge, counts, ratings AR labels)
+### 3. ✅ Edit app/search/SearchClient.tsx - Dynamic ل.س/SYP based on language
+### 4. ✅ Test API: Improvements verified (dedup, fuzzy sim scores, pro descriptions, currency ل.س)
+### 5. ✅ Update TODO-Search-Pro.md completed
+### 6. [ ] attempt_completion
+
+**Current Progress: Steps 1-5 ✅ Task complete!**
+

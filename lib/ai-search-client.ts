@@ -34,7 +34,7 @@ async function getEmbedder(): Promise<FeatureExtractionPipeline> {
 
 export interface SearchableItem {
   id: string
-  type: 'product' | 'supplier' | 'category'
+  type: 'product' | 'supplier' | 'trader' | 'category'
   title: string
   description: string
   url: string
@@ -70,7 +70,7 @@ function basicSearch(
   query: string,
   items: Array<{
     id: string
-    type: 'product' | 'supplier'
+    type: 'product' | 'supplier' | 'trader'
     title: string
     description: string
     url: string
@@ -101,7 +101,7 @@ export async function searchSemantic(
   query: string,
   items: Array<{
   id: string
-  type: 'product' | 'supplier'
+  type: 'product' | 'supplier' | 'trader'
   title: string
   description: string
   url: string

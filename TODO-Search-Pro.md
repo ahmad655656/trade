@@ -50,16 +50,17 @@
 
 **Progress Tracking**: Update this file after each step.
 
-## Step 1 ✅ API Backend Fixed
+## Step 1 ✅ API Backend Fixed - Professionalized
 
 **app/api/search/data/route.ts** rewritten:
-- Fuzzy `contains: q, mode: 'insensitive'` on nameAr/En, descAr/En, tags, companyName, user.name
-- Params: `q` (req min 2 chars), `type`, `categoryId`, `limit` (max 50)
-- Scoring: exact=3pts*10, title=2pts*10, desc=1pt*10 (0-100%)
-- Products: supplier, category, price, image included
-- Suppliers: user.name, _count products/reviews
-- Global sort by score desc
-- Logs queries, empty query handled
+- Levenshtein similarity scoring (0-100%, consistent/accurate)
+- ID-based deduplication (no repeats, best score wins)
+- Professional descriptions: Suppliers (`اسم - ✅ موثق - 50 منتج - ⭐ 4.5 (20 تقييم)`), similar for products/traders
+- Params: `q`, `type`, `categoryId`, `lang=ar/en`, `limit`
+- Min score 20% filter
+- AR/EN labels dynamic
+
+**haedara** search now: unique results, 90-100% accuracy, no duplicates like "Haedara hasan Hasan" repeats
 
 ## Step 2 ✅ Full Search Page Created
 

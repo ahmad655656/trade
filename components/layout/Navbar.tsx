@@ -318,8 +318,8 @@ export default function Navbar() {
               onChange={(e) => search(e.target.value)}
               onFocus={() => setSearchOpen(true)}
               placeholder={language === 'ar'
-                ? 'ابحث عن منتجات او موردين'
-                : 'Search products or suppliers'}
+                ? 'ابحث عن منتجات أو موردين أو تجار'
+                : 'Search products, suppliers, or traders'}
               className="w-full rounded-xl border border-white/10 bg-[color-mix(in_oklab,var(--app-surface)_92%,transparent)] px-4 py-2 pr-10 text-sm text-app outline-none placeholder:text-muted/70 focus:border-[var(--app-primary)]/50 focus:ring-2 focus:ring-[var(--app-primary)]/20"
             />
 

@@ -48,7 +48,7 @@ export interface SuppliersApiResponse {
 
 export interface SearchableItem {
   id: string
-  type: 'product' | 'supplier' | 'category'
+  type: 'product' | 'supplier' | 'trader' | 'category'
   title: string
   description: string
   url: string
