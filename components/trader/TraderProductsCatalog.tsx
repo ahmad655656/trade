@@ -255,7 +255,7 @@ export default function TraderProductsCatalog() {
               <article key={product.id} className="card-pro rounded-xl p-4">
                 <CloudImage
                   src={product.images?.[0]}
-                  alt={language === 'ar' ? product.nameAr || product.nameEn : product.nameEn || product.nameAr || ''}
+                  alt={(language === 'ar' ? product.nameAr ?? product.nameEn : product.nameEn ?? product.nameAr) ?? ''}
                   width={400}
                   height={300}
                   className="w-full h-32 object-cover rounded-lg"
