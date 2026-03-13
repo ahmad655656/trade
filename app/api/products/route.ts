@@ -212,7 +212,15 @@ export async function POST(request: Request) {
       const created = await prisma.product.create({
         data: {
           supplierId: user.supplier.id,
-          ...parsed.data,
+          name: parsed.data.nameAr || parsed.data.nameEn || 'New Product',
+          nameAr: parsed.data.nameAr,
+          nameEn: parsed.data.nameEn,
+          descriptionAr: parsed.data.descriptionAr,
+          price: parsed.data.price,
+          quantity: parsed.data.quantity,
+          minOrderQuantity: parsed.data.minOrderQuantity,
+          sku: parsed.data.sku,
+          images: parsed.data.images,
           categoryId,
           status,
         },
