@@ -75,15 +75,48 @@ export function getOptimizedImageUrl(imageUrl: string, width = 400, height?: num
   
   // Local paths pass through
   if (imageUrl.startsWith('/uploads/')) return imageUrl;
-  
-  const publicId = imageUrl.split('/').pop()?.split('.')[0] || '';
-  return cloudinary.url(publicId, {
-    transformation: [
+
+  try {
+    // Support protocol-less URLs (//res.cloudinary.com/...) and missing protocol (res.cloudinary.com/...)
+    const normalized = imageUrl.startsWith('//')
+      ? `https:${imageUrl}`
+      : imageUrl.startsWith('res.cloudinary.com/')
+      ? `https://${imageUrl}`
+      : imageUrl
+
+    const url = new URL(normalized)
+    const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || ''
+
+    // If Cloudinary isn't configured, just return the original URL.
+    if (!cloudName) return normalized
+
+    const transformations = [
       { width, height, crop: height ? 'fill' : 'scale' },
       { quality: 'auto' },
       { fetch_format: 'auto' },
-    ],
-  });
+    ]
+
+    const uploadIndex = url.pathname.indexOf('/upload/')
+    if (uploadIndex !== -1) {
+      const afterUpload = url.pathname.slice(uploadIndex + '/upload/'.length)
+      const parts = afterUpload.split('/')
+      const withoutVersion = /^v\d+$/.test(parts[0]) ? parts.slice(1) : parts
+      const publicIdWithExt = withoutVersion.join('/')
+      const publicId = publicIdWithExt.replace(/\.[^.]+$/, '')
+
+      return cloudinary.url(publicId, {
+        transformation: transformations,
+      })
+    }
+
+    // If there is no /upload/ segment, assume this is already a publicId.
+    const trimmedId = normalized.replace(/\.[^.]+$/, '')
+    return cloudinary.url(trimmedId, {
+      transformation: transformations,
+    })
+  } catch {
+    return imageUrl
+  }
 }
 
 // Delete image (Cloudinary only, local delete separate if needed)

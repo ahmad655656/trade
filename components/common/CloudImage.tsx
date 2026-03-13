@@ -17,13 +17,20 @@ function resolveImageSrc(src: string, width: number, height?: number) {
   const isLocal = trimmed.startsWith('blob:') || trimmed.startsWith('data:')
   if (isLocal) return trimmed
 
-  const isHttp = /^https?:\/\//i.test(trimmed)
-  if (!isHttp) return trimmed
+  // Normalize protocol-less URLs like "//res.cloudinary.com/..." or "res.cloudinary.com/..."
+  const normalized = trimmed.startsWith('//')
+    ? `https:${trimmed}`
+    : trimmed.startsWith('res.cloudinary.com/')
+    ? `https://${trimmed}`
+    : trimmed
+
+  const isHttp = /^https?:\/\//i.test(normalized)
+  if (!isHttp) return normalized
 
   try {
-    return getOptimizedImageUrlClient(trimmed, width, height)
+    return getOptimizedImageUrlClient(normalized, width, height)
   } catch {
-    return trimmed
+    return normalized
   }
 }
 
@@ -32,7 +39,6 @@ export function CloudImage({ src, alt = '', width = 400, height = 300, className
     return (
       <div
         className={`flex items-center justify-center rounded-lg bg-gray-100 ${className}`}
-        style={{ width, height }}
         aria-label={alt || 'No image'}
       >
         <svg className="h-8 w-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">

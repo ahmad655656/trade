@@ -5,6 +5,7 @@ import toast from 'react-hot-toast'
 import { HeartIcon } from '@heroicons/react/24/outline'
 import { useUi } from '@/components/providers/UiProvider'
 import { formatSypAmount } from '@/lib/currency'
+import { CloudImage } from '@/components/common/CloudImage'
 
 type Product = {
   id: string
@@ -20,6 +21,7 @@ type Product = {
   supplierId: string
   sku: string | null
   minOrderQuantity: number
+  images: string[]
   category: { nameAr: string | null; nameEn: string | null; name: string }
   supplier: { user: { name: string } }
 }
@@ -251,7 +253,13 @@ export default function TraderProductsCatalog() {
 
             return (
               <article key={product.id} className="card-pro rounded-xl p-4">
-                <div className="h-32 rounded-lg bg-[color-mix(in_oklab,var(--app-border)_55%,transparent)]" />
+                <CloudImage
+                  src={product.images?.[0]}
+                  alt={language === 'ar' ? product.nameAr || product.nameEn : product.nameEn || product.nameAr || ''}
+                  width={400}
+                  height={300}
+                  className="w-full h-32 object-cover rounded-lg"
+                />
                 <p className="mt-3 font-semibold text-app">{language === 'ar' ? product.nameAr || product.nameEn : product.nameEn || product.nameAr}</p>
                 <p className="text-xs text-muted">{language === 'ar' ? `المورد: ${product.supplier.user.name}` : `Supplier: ${product.supplier.user.name}`}</p>
                 <p className="text-xs text-muted">{language === 'ar' ? `التصنيف: ${categoryName}` : `Category: ${categoryName}`}</p>
