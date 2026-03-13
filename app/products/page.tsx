@@ -1,13 +1,15 @@
 ﻿'use client'
 
+import { CloudImage } from '@/components/common/CloudImage'
 import { ProductStatus } from '@/lib/prisma-enums'
 import { useEffect, useState } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { MagnifyingGlassIcon } from '@heroicons/react/24/outline'
 import { useUi } from '@/components/providers/UiProvider'
 import { formatSypAmount } from '@/lib/currency'
 
-type ProductCard = {
+type ProductCardType = {
   id: string
   nameAr: string | null
   nameEn: string | null
@@ -26,7 +28,7 @@ type ProductCard = {
 export default function ProductsPage() {
   const { language } = useUi()
   const router = useRouter()
-  const [products, setProducts] = useState<ProductCard[]>([])
+  const [products, setProducts] = useState<ProductCardType[]>([])
   const [loading, setLoading] = useState(true)
   const [query, setQuery] = useState('')
 
@@ -46,7 +48,7 @@ export default function ProductsPage() {
   }, [])
 
   return (
-<section className="space-y-4">
+    <section className="space-y-4">
       {/* Search Bar */}
       <div className="card-pro rounded-2xl p-8">
         <form className="mb-6 flex gap-2" onSubmit={(e) => { e.preventDefault(); router.push(`/search?q=${encodeURIComponent(query)}&type=products`) }}>
@@ -76,20 +78,28 @@ export default function ProductsPage() {
       ) : (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {products.map((product) => (
-            <article key={product.id} className="card-pro rounded-xl p-4">
-              <h2 className="font-semibold text-app">{language === 'ar' ? product.nameAr || product.nameEn : product.nameEn || product.nameAr}</h2>
+            <Link key={product.id} href={`/products/${product.id}`} className="card-pro rounded-xl p-4 hover:shadow-lg transition-shadow">
+              <CloudImage 
+                src={product.images[0]} 
+                alt={product.nameAr || product.nameEn || ''} 
+                width={400} 
+                height={300}
+                className="w-full h-48 object-cover rounded-lg mb-3"
+              />
+              <h2 className="font-semibold text-app line-clamp-2">{language === 'ar' ? product.nameAr || product.nameEn : product.nameEn || product.nameAr}</h2>
               <p className="mt-1 text-xs text-muted">
                 {language === 'ar'
                   ? `التصنيف: ${product.category?.nameAr || product.category?.name || '-'}`
                   : `Category: ${product.category?.nameEn || product.category?.name || '-'}`}
               </p>
-              <p className="mt-2 text-sm text-muted">{formatSypAmount(product.price, language)}</p>
+              <p className="mt-2 text-lg font-bold text-app">{formatSypAmount(product.price, language)}</p>
               <p className="text-xs text-muted">{language === 'ar' ? `المتاح: ${product.quantity}` : `Available: ${product.quantity}`}</p>
-            </article>
+            </Link>
           ))}
         </div>
       )}
     </section>
   )
 }
+
 

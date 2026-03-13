@@ -94,17 +94,24 @@ export default function SupplierProfilePage({ params }: { params: Promise<{ id: 
       </section>
 
       <section className="card-pro rounded-xl p-4">
-        <h2 className="text-lg font-semibold text-app">{language === 'ar' ? 'كتالوج المنتجات' : 'Product catalog'}</h2>
-        <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-          {data.products.map((product) => (
-            <article key={product.id} className="rounded-lg border border-app p-3">
-              <p className="font-semibold text-app">{language === 'ar' ? product.nameAr || product.nameEn || product.name : product.nameEn || product.nameAr || product.name}</p>
+<div className="flex items-center gap-3 mb-4">
+          <h2 className="text-lg font-semibold text-app">{language === 'ar' ? 'كتالوج المنتجات' : 'Product catalog'}</h2>
+          <Link href={`/suppliers/${id}/products`} className="text-primary text-sm font-medium hover:underline">
+            {language === 'ar' ? 'عرض الكل' : 'View all'}
+          </Link>
+        </div>
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+          {data.products.slice(0, 6).map((product) => (
+            <Link key={product.id} href={`/products/${product.id}`} className="block rounded-lg border border-app p-3 hover:shadow-sm">
+              <div className="w-full h-32 bg-gray-100 rounded mb-2 flex items-center justify-center">
+                {/* Placeholder until images loaded */}
+              </div>
+              <p className="font-semibold text-app line-clamp-1">{language === 'ar' ? product.nameAr || product.nameEn || product.name : product.nameEn || product.nameAr || product.name}</p>
               <p className="text-sm text-app">{formatSypAmount(product.price, language)}</p>
-              <p className="text-xs text-muted">{language === 'ar' ? `الكمية: ${product.quantity}` : `Stock: ${product.quantity}`}</p>
-              <p className="text-xs text-muted">{language === 'ar' ? `التقييم: ${product.rating.toFixed(1)}` : `Rating: ${product.rating.toFixed(1)}`}</p>
-            </article>
+              <p className="text-xs text-muted line-clamp-1">{language === 'ar' ? `الكمية: ${product.quantity}` : `Stock: ${product.quantity}`}</p>
+            </Link>
           ))}
-          {!data.products.length ? <p className="text-sm text-muted">{language === 'ar' ? 'لا توجد منتجات منشورة' : 'No published products'}</p> : null}
+          {data.products.length === 0 && <p className="text-sm text-muted col-span-full text-center py-8">{language === 'ar' ? 'لا توجد منتجات منشورة' : 'No published products'}</p>}
         </div>
       </section>
     </div>

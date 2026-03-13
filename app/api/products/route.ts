@@ -150,6 +150,9 @@ export async function GET(request: Request) {
   }
 }
 
+import formidable from 'formidable'
+import { uploadImageBuffer } from '@/lib/cloudinary'
+
 export async function POST(request: Request) {
   try {
     const sameOriginError = assertSameOrigin(request)
@@ -162,56 +165,126 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
     }
 
-    const body = await request.json()
-    const parsed = productCreateSchema.safeParse(body)
-    if (!parsed.success) {
-      return NextResponse.json(
-        { success: false, error: parsed.error.issues[0]?.message ?? 'Invalid product payload' },
-        { status: 400 },
-      )
+    const contentType = request.headers.get('content-type')
+    if (contentType?.includes('multipart/form-data')) {
+      // Multipart upload with Node.js fs
+      const form = formidable({
+        multiples: true,
+        keepExtensions: true,
+        maxFileSize: 10 * 1024 * 1024, // 10MB
+      })
+
+      const [fields, files] = await form.parse(request as any)
+
+      const images = [] as string[]
+      if (files.images) {
+        const imageFiles = Array.isArray(files.images) ? files.images : [files.images]
+        const fs = await import('fs/promises')
+        for (const file of imageFiles as any[]) {
+          if (file.filepath) {
+            const buffer = await fs.readFile(file.filepath)
+            const url = await uploadImageBuffer(buffer, undefined, 'trade/products')
+            images.push(url)
+            await fs.unlink(file.filepath)
+          }
+        }
+      }
+
+      const input = {
+        nameAr: (fields.nameAr as string[])[0] || '',
+        nameEn: (fields.nameEn as string[])[0] || '',
+        descriptionAr: (fields.descriptionAr as string[])[0] || '',
+        price: Number(fields.price),
+        quantity: Number(fields.quantity),
+        minOrderQuantity: Number(fields.minOrderQuantity || 1),
+        sku: (fields.sku as string[])[0] || '',
+        images,
+      }
+
+      const parsed = productCreateSchema.safeParse(input)
+      if (!parsed.success) {
+        return NextResponse.json({ success: false, error: parsed.error.issues[0]?.message ?? 'Invalid data' }, { status: 400 })
+      }
+
+      const categoryId = await resolveCategoryId(fields.categoryId?.[0])
+      const status = ProductStatus.DRAFT
+
+      const created = await prisma.product.create({
+        data: {
+          supplierId: user.supplier.id,
+          ...parsed.data,
+          categoryId,
+          status,
+        },
+        include: { category: { select: { id: true, name: true, nameAr: true, nameEn: true } } },
+      })
+
+      await writeAuditLog({
+        request,
+        actorUserId: user.id,
+        actorRole: user.role,
+        action: 'PRODUCT_CREATED',
+        entityType: 'PRODUCT',
+        entityId: created.id,
+        metadata: {
+          supplierId: user.supplier.id,
+        },
+      })
+
+      return NextResponse.json({ success: true, data: created }, { status: 201 })
+    } else {
+      // JSON payload (existing)
+      const body = await request.json()
+      const parsed = productCreateSchema.safeParse(body)
+      if (!parsed.success) {
+        return NextResponse.json(
+          { success: false, error: parsed.error.issues[0]?.message ?? 'Invalid product payload' },
+          { status: 400 },
+        )
+      }
+
+      const input = parsed.data
+      const categoryId = await resolveCategoryId(input.categoryId)
+      const status = input.status ?? ProductStatus.DRAFT
+
+      const created = await prisma.product.create({
+        data: {
+          supplierId: user.supplier.id,
+          name: input.nameEn?.trim() || input.nameAr.trim(),
+          nameAr: input.nameAr.trim(),
+          nameEn: input.nameEn?.trim() || null,
+          description: input.descriptionEn?.trim() || input.descriptionAr?.trim() || null,
+          descriptionAr: input.descriptionAr?.trim() || null,
+          descriptionEn: input.descriptionEn?.trim() || null,
+          categoryId,
+          tags: input.tags ?? [],
+          price: input.price,
+          compareAtPrice: input.compareAtPrice ?? null,
+          quantity: input.quantity,
+          minOrderQuantity: input.minOrderQuantity ?? 1,
+          sku: input.sku?.trim() || null,
+          images: input.images ?? [],
+          status,
+        },
+        include: {
+          category: { select: { id: true, name: true, nameAr: true, nameEn: true } },
+        },
+      })
+
+      await writeAuditLog({
+        request,
+        actorUserId: user.id,
+        actorRole: user.role,
+        action: 'PRODUCT_CREATED',
+        entityType: 'PRODUCT',
+        entityId: created.id,
+        metadata: {
+          supplierId: user.supplier.id,
+        },
+      })
+
+      return NextResponse.json({ success: true, data: created, message: 'Product created' }, { status: 201 })
     }
-
-    const input = parsed.data
-    const categoryId = await resolveCategoryId(input.categoryId)
-    const status = input.status ?? ProductStatus.DRAFT
-
-    const created = await prisma.product.create({
-      data: {
-        supplierId: user.supplier.id,
-        name: input.nameEn?.trim() || input.nameAr.trim(),
-        nameAr: input.nameAr.trim(),
-        nameEn: input.nameEn?.trim() || null,
-        description: input.descriptionEn?.trim() || input.descriptionAr?.trim() || null,
-        descriptionAr: input.descriptionAr?.trim() || null,
-        descriptionEn: input.descriptionEn?.trim() || null,
-        categoryId,
-        tags: input.tags ?? [],
-        price: input.price,
-        compareAtPrice: input.compareAtPrice ?? null,
-        quantity: input.quantity,
-        minOrderQuantity: input.minOrderQuantity ?? 1,
-        sku: input.sku?.trim() || null,
-        images: input.images ?? [],
-        status,
-      },
-      include: {
-        category: { select: { id: true, name: true, nameAr: true, nameEn: true } },
-      },
-    })
-
-    await writeAuditLog({
-      request,
-      actorUserId: user.id,
-      actorRole: user.role,
-      action: 'PRODUCT_CREATED',
-      entityType: 'PRODUCT',
-      entityId: created.id,
-      metadata: {
-        supplierId: user.supplier.id,
-      },
-    })
-
-    return NextResponse.json({ success: true, data: created, message: 'Product created' }, { status: 201 })
   } catch (error) {
     console.error('Failed to create product:', error)
     return NextResponse.json({ success: false, error: 'Failed to create product' }, { status: 500 })

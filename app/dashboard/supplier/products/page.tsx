@@ -1,11 +1,14 @@
 ﻿'use client'
 
 import { ProductStatus } from '@/lib/prisma-enums'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState, useRef } from 'react'
 import toast from 'react-hot-toast'
 import SupplierPageHeader from '@/components/supplier/SupplierPageHeader'
 import { useUi } from '@/components/providers/UiProvider'
 import { formatSypAmount } from '@/lib/currency'
+import { CloudImage } from '@/components/common/CloudImage'
+
+
 
 type CategoryOption = {
   id: string
@@ -16,6 +19,7 @@ type CategoryOption = {
 
 type ProductItem = {
   id: string
+  images?: string[]
   nameAr: string | null
   nameEn: string | null
   price: number
@@ -32,6 +36,7 @@ type ProductItem = {
     nameEn: string | null
   }
 }
+
 
 type ProductsResponse = {
   success: boolean
@@ -61,6 +66,12 @@ export default function SupplierProductsPage() {
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [statusDrafts, setStatusDrafts] = useState<Record<string, ProductStatus>>({})
+  const [images, setImages] = useState<string[]>([])
+  const [isUploading, setIsUploading] = useState(false)
+  const [localPreviews, setLocalPreviews] = useState<string[]>([])
+  const fileInputRefs = useRef<(HTMLInputElement | null)[]>([])
+
+
 
   const [form, setForm] = useState({
     nameAr: '',
@@ -111,8 +122,98 @@ export default function SupplierProductsPage() {
 
   const publishedCount = useMemo(() => items.filter((p) => p.status === 'ACTIVE').length, [items])
 
+  const uploadImage = useCallback(async (file: File, index: number) => {
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error(language === 'ar' ? 'حجم الصورة أكبر من 10 ميغا بايت' : 'Image too large (max 10MB)')
+      return
+    }
+    if (!file.type.startsWith('image/')) {
+      toast.error(language === 'ar' ? 'يرجى اختيار صورة' : 'Please select an image')
+      return
+    }
+
+    const formData = new FormData()
+    formData.append('image', file)
+
+    setIsUploading(true)
+    try {
+      const res = await fetch('/api/uploads/product-image', {
+        method: 'POST',
+        body: formData,
+      })
+      const result = await res.json()
+      if (res.ok && result.success) {
+        const url = result.data.url
+        setImages(prev => {
+          const newImages = [...prev]
+          newImages[index] = url
+          return newImages
+        })
+        setLocalPreviews(prev => {
+          const newPreviews = [...prev]
+          newPreviews[index] = url
+          return newPreviews
+        })
+        toast.success(language === 'ar' ? 'تم رفع الصورة بنجاح' : 'Image uploaded successfully')
+      } else {
+        throw new Error(result.error || 'Upload failed')
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : language === 'ar' ? 'فشل رفع الصورة' : 'Image upload failed')
+    } finally {
+      setIsUploading(false)
+    }
+  }, [language])
+
+  const handleImageSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>, index: number) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    // Create local preview
+    const preview = URL.createObjectURL(file)
+    const currentPreviews = [...localPreviews]
+    currentPreviews[index] = preview
+    setLocalPreviews(currentPreviews)
+
+    // Auto-upload
+    uploadImage(file, index)
+
+    // Reset input
+    e.target.value = ''
+  }, [localPreviews, uploadImage])
+
+  const removeImage = useCallback((index: number) => {
+    const preview = localPreviews[index]
+    if (preview.startsWith('blob:')) URL.revokeObjectURL(preview)
+    setImages(prev => {
+      const newImages = [...prev]
+      newImages[index] = ''
+      return newImages
+    })
+    setLocalPreviews(prev => {
+      const newPreviews = [...prev]
+      newPreviews[index] = ''
+      return newPreviews
+    })
+  }, [localPreviews])
+
   const createProduct = async (e: React.FormEvent) => {
     e.preventDefault()
+
+    if (images.filter(Boolean).length === 0) {
+      toast.error(language === 'ar' ? 'يجب رفع صورة واحدة على الأقل' : 'At least one image required')
+      return
+    }
+    if (images.filter(Boolean).length > 2) {
+      toast.error(language === 'ar' ? 'الحد الأقصى صورتين فقط' : 'Maximum 2 images')
+      return
+    }
+
+    if (!form.categoryId) {
+      toast.error(language === 'ar' ? 'اختر التصنيف أولاً' : 'Select category first')
+      return
+    }
+
 
     if (!form.categoryId) {
       toast.error(language === 'ar' ? 'اختر التصنيف أولاً' : 'Select category first')
@@ -139,8 +240,10 @@ export default function SupplierProductsPage() {
             .split(',')
             .map((v) => v.trim())
             .filter(Boolean),
+          images: images.filter(Boolean),
           status: form.status,
         }),
+
       })
 
       const result = await response.json()
@@ -163,7 +266,10 @@ export default function SupplierProductsPage() {
         tags: '',
         status: 'DRAFT',
       }))
+      setImages([])
+      setLocalPreviews([])
       await loadProducts()
+
     } catch (error) {
       toast.error(error instanceof Error ? error.message : language === 'ar' ? 'فشل إضافة المنتج' : 'Failed to create product')
     } finally {
@@ -235,6 +341,93 @@ export default function SupplierProductsPage() {
 
       <section className="card-pro rounded-xl p-5">
         <h2 className="text-lg font-semibold text-app">{language === 'ar' ? 'إضافة منتج جديد (تفصيلي)' : 'Add new product (detailed)'}</h2>
+
+        <div className="md:col-span-2 mb-8 p-6 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl border-2 border-dashed border-dashed-primary shadow-sm">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-2 bg-gradient-to-br from-primary to-blue-600 rounded-xl shadow-lg">
+                <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-app">📸 صور المنتج <span className="text-red-500">(1-2 صور مطلوبة)</span></h3>
+                <p className="text-sm text-muted">الحد الأقصى صورتين، 10 ميغا بايت لكل صورة. رفع تلقائي فوري إلى Cloudinary ☁️</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {Array.from({ length: 2 }).map((_, i) => (
+                <div key={i} className="group relative">
+                  <label 
+                    className={`w-full h-32 border-2 rounded-xl p-4 flex flex-col items-center justify-center text-center transition-all cursor-pointer overflow-hidden ${
+                      localPreviews[i] 
+                        ? 'border-green-400 bg-green-50 shadow-lg' 
+                        : 'border-dashed border-gray-300 hover:border-primary/50 hover:bg-gray-50'
+                    }`}
+                  >
+                    {localPreviews[i] ? (
+                      <>
+                        <div className="relative w-full h-full rounded-lg overflow-hidden">
+                          <CloudImage 
+                            src={localPreviews[i]} 
+                            alt={`صورة ${i + 1}`}
+                            width={128}
+                            height={128}
+                            className="w-full h-full object-cover"
+                          />
+                          {isUploading && (
+                            <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
+                              <div className="w-8 h-8 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                            </div>
+                          )}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            e.preventDefault()
+                            removeImage(i)
+                          }}
+                          className="absolute -top-3 -right-3 bg-red-500 hover:bg-red-600 text-white rounded-full w-8 h-8 flex items-center justify-center text-sm font-bold shadow-lg border-2 border-white z-10 transition-all"
+                          title={language === 'ar' ? 'حذف' : 'Delete'}
+                        >
+                          ×
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <svg className="w-12 h-12 text-gray-400 group-hover:text-primary mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                        </svg>
+                        <p className="text-sm font-medium text-muted mb-1">صورة {i + 1}</p>
+                        <p className="text-xs text-gray-500">اضغط لرفع</p>
+                      </>
+                    )}
+                    <input
+                      ref={el => {
+                        if (el) fileInputRefs.current[i] = el
+                      }}
+                      type="file"
+                      accept="image/*"
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                      onChange={(e) => handleImageSelect(e, i)}
+                      disabled={isUploading}
+                    />
+                  </label>
+                  {images.filter(Boolean).length >= 2 && i === 1 && (
+                    <p className="text-xs text-green-600 mt-1 text-center">✅ الحد الأقصى (صورتين)</p>
+                  )}
+                </div>
+              ))}
+            </div>
+            {images.filter(Boolean).length === 0 ? (
+              <p className="text-xs text-muted mt-4 text-center italic">اضغط على المربع لاختيار ورفع صورة المنتج تلقائياً ☁️</p>
+            ) : (
+              <p className="text-xs text-green-600 mt-4 text-center font-medium">
+                ✅ جاهز: {images.filter(Boolean).length} صورة{images.filter(Boolean).length > 1 ? 's' : ''} مرفوعة بنجاح
+              </p>
+            )}
+          </div>
+
 
         <form className="mt-4 grid gap-4 md:grid-cols-2" onSubmit={createProduct}>
           <Field
@@ -333,9 +526,15 @@ export default function SupplierProductsPage() {
           </Field>
 
           <div className="md:col-span-2 flex flex-wrap gap-2">
-            <button type="submit" disabled={submitting || loading} className="btn-primary !rounded-lg !px-4 !py-2 disabled:opacity-60">
+            <button type="submit" disabled={submitting || loading || isUploading || images.filter(Boolean).length === 0} className="btn-primary !rounded-lg !px-4 !py-2 disabled:opacity-60">
               {submitting ? (language === 'ar' ? 'جارٍ الحفظ...' : 'Saving...') : language === 'ar' ? 'حفظ المنتج' : 'Save product'}
+              {isUploading && (
+                <div className="inline-flex items-center gap-1 ml-2">
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                </div>
+              )}
             </button>
+
           </div>
         </form>
       </section>
