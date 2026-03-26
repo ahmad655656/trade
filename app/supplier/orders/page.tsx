@@ -20,6 +20,7 @@ type Order = {
   shippingMethod: string | null
   trackingNumber: string | null
   estimatedDelivery: string | null
+  supplierPaymentConfirmedAt: string | null
   trader: { user: { name: string; email: string } }
   items: Array<{
     id: string

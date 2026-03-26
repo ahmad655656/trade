@@ -22,6 +22,7 @@ export async function POST(request: Request, { params }: Params) {
     if (!user || user.role !== Role.SUPPLIER || !user.supplier) {
       return NextResponse.json({ success: false, error: i18nText(language, 'غير مصرح', 'Unauthorized') }, { status: 401 })
     }
+    const supplier = user.supplier
 
     const { id } = await params
     const order = await prisma.order.findUnique({
@@ -47,9 +48,15 @@ export async function POST(request: Request, { params }: Params) {
     if (!order) {
       return NextResponse.json({ success: false, error: i18nText(language, 'الطلب غير موجود', 'Order not found') }, { status: 404 })
     }
+    if (!order.payment) {
+      return NextResponse.json(
+        { success: false, error: i18nText(language, '�� ���� ����� ��� ������ ������', 'Payment record is missing') },
+        { status: 400 },
+      )
+    }
 
     // Check if any item belongs to this supplier
-    const supplierItems = order.items.filter(item => item.supplierId === user.supplier!.id)
+    const supplierItems = order.items.filter(item => item.supplierId === supplier.id)
     if (supplierItems.length === 0) {
       return NextResponse.json({ success: false, error: i18nText(language, 'هذا الطلب لا يخصك', 'This order does not belong to you') }, { status: 403 })
     }
@@ -68,6 +75,10 @@ export async function POST(request: Request, { params }: Params) {
         { status: 400 }
       )
     }
+
+    const supplierAmount = Number.isFinite(order.payment?.supplierAmount)
+      ? order.payment!.supplierAmount
+      : Math.max(order.totalAmount - order.platformFee, 0)
 
     const updated = await prisma.$transaction(async (tx) => {
       // Update order
@@ -93,18 +104,23 @@ export async function POST(request: Request, { params }: Params) {
 
       // Trigger wallet payout logic (admin approval pending)
       // Create wallet transaction for supplier
-      if (user.supplier!.walletId) {
-        await tx.walletTransaction.create({
-          data: {
-            walletId: user.supplier.walletId,
-            type: 'PURCHASE', // order sale
-            amount: order.supplierAmount || 0,
-            description: `طلب #${order.orderNumber}`,
-            referenceId: order.id,
-            status: 'PENDING' // admin approves payout
-          }
-        })
-      }
+      const wallet = await tx.wallet.upsert({
+        where: { userId: user.id },
+        update: {},
+        create: { userId: user.id },
+        select: { id: true },
+      })
+
+      await tx.walletTransaction.create({
+        data: {
+          walletId: wallet.id,
+          type: 'PURCHASE', // order sale
+          amount: supplierAmount,
+          description: `طلب #${order.orderNumber}`,
+          referenceId: order.id,
+          status: 'PENDING' // admin approves payout
+        }
+      })
 
       return orderUpdated
     })
@@ -112,7 +128,7 @@ export async function POST(request: Request, { params }: Params) {
     // Notify trader
     await notifyUsers({
       userIds: [order.trader.user.id],
-      type: NotificationType.ORDER_COMPLETED,
+      type: NotificationType.PAYMENT_RECEIVED,
       title: i18nText(language, `تم تأكيد استلام المال لطلب ${order.orderNumber}`, `Payment confirmed for order ${order.orderNumber}`),
       message: i18nText(
         language,
@@ -128,14 +144,14 @@ export async function POST(request: Request, { params }: Params) {
       title: i18nText(language, `طلب مكتمل يحتاج اعتماد تحويل #${order.orderNumber}`, `Completed order payout pending #${order.orderNumber}`),
       message: i18nText(
         language,
-        `المورد ${user.supplier.companyName} أكد استلام نقود الطلب ${order.orderNumber} من التاجر ${order.trader.companyName}. المبلغ الصافي: ${order.supplierAmount || 0}`,
-        `Supplier ${user.supplier.companyName} confirmed cash for order ${order.orderNumber} from trader ${order.trader.companyName}. Net: ${order.supplierAmount || 0}`
+        `المورد ${supplier.companyName} أكد استلام نقود الطلب ${order.orderNumber} من التاجر ${order.trader.companyName}. المبلغ الصافي: ${supplierAmount}`,
+        `Supplier ${supplier.companyName} confirmed cash for order ${order.orderNumber} from trader ${order.trader.companyName}. Net: ${supplierAmount}`
       ),
       data: { 
         orderId: order.id, 
         orderNumber: order.orderNumber,
-        supplierId: user.supplier.id,
-        amount: order.supplierAmount || 0
+        supplierId: supplier.id,
+        amount: supplierAmount
       }
     })
 
@@ -146,7 +162,7 @@ export async function POST(request: Request, { params }: Params) {
       action: 'SUPPLIER_CONFIRM_PAYMENT_RECEIVED',
       entityType: 'ORDER',
       entityId: order.id,
-      metadata: { orderNumber: order.orderNumber, amount: order.supplierAmount }
+      metadata: { orderNumber: order.orderNumber, amount: supplierAmount }
     })
 
     return NextResponse.json({
@@ -164,4 +180,3 @@ export async function POST(request: Request, { params }: Params) {
     return NextResponse.json({ success: false, error: 'Failed to confirm payment' }, { status: 500 })
   }
 }
-

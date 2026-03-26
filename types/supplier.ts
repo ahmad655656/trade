@@ -82,3 +82,17 @@ export type WalletTransaction = {
   type: 'IN' | 'OUT'
   status: 'COMPLETED' | 'PENDING' | 'FAILED'
 }
+
+export type WishlistItem = {
+  id: string
+  productId: string
+  product: {
+    id: string
+    name: string
+    nameAr: string | null
+    nameEn: string | null
+    price: number
+    images: string[]
+    supplier: { user: { name: string } }
+  }
+}

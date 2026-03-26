@@ -1,7 +1,7 @@
 import { prisma } from '@/lib/prisma'
 import { SYRIATEL_CASH_NUMBER } from '@/lib/constants'
 
-export const SERIAL_CASH_NUMBER = SYRIATEL_CASH_NUMBER as const
+export const SERIAL_CASH_NUMBER = SYRIATEL_CASH_NUMBER
 
 const DEFAULT_COMMISSION_RATE = 0.03
 
@@ -24,4 +24,3 @@ export function calculatePlatformFee(orderSubtotal: number, rate: number) {
   const safeRate = Number.isFinite(rate) ? Math.max(rate, 0) : DEFAULT_COMMISSION_RATE
   return Number((safeSubtotal * safeRate).toFixed(2))
 }
-
