@@ -1,4 +1,7 @@
 import { prisma } from '@/lib/prisma'
+import { SYRIATEL_CASH_NUMBER } from '@/lib/constants'
+
+export const SERIAL_CASH_NUMBER = SYRIATEL_CASH_NUMBER as const
 
 const DEFAULT_COMMISSION_RATE = 0.03
 

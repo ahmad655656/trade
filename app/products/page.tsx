@@ -57,7 +57,7 @@ export default function ProductsPage() {
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder={language === 'ar' ? 'ابحث في المنتجات...' : 'Search products...'}
+              placeholder={language === 'ar' ? 'ابحث عن منتجات تجارية محددة...' : 'Search for specific business products...'}
               className="w-full rounded-xl border border-app bg-[color-mix(in_oklab,var(--app-surface)_92%,transparent)] pl-12 py-3 text-sm text-app outline-none placeholder:text-muted/70 focus:border-[var(--app-primary)]/50 focus:ring-2 focus:ring-[var(--app-primary)]/20"
             />
           </div>
@@ -65,14 +65,14 @@ export default function ProductsPage() {
             {language === 'ar' ? 'ابحث' : 'Search'}
           </button>
         </form>
-        <h1 className="text-3xl font-bold text-app">{language === 'ar' ? 'سوق المنتجات المنشورة' : 'Published products marketplace'}</h1>
+        <h1 className="text-3xl font-bold text-app">{language === 'ar' ? 'الكتالوج التجاري الشامل' : 'Comprehensive Business Catalog'}</h1>
         <p className="mt-2 text-muted">
-          {language === 'ar' ? 'هذه المنتجات أضافها الموردون وتم نشرها للتجار.' : 'These products are added by suppliers and published for traders.'}
+          {language === 'ar' ? 'منتجات عالية الجودة من موردين موثوقين جاهزة للطلبات التجارية الكبيرة.' : 'Premium products from reliable suppliers ready for large business orders.'}
         </p>
       </div>
 
       {loading ? (
-        <div className="card-pro rounded-xl p-6 text-sm text-muted">{language === 'ar' ? 'جارٍ التحميل...' : 'Loading...'}</div>
+        <div className="card-pro rounded-xl p-6 text-sm text-muted">{language === 'ar' ? 'جارٍ تحضير الكتالوج الخاص بك...' : 'Preparing your personalized catalog...'}</div>
       ) : products.length === 0 ? (
         <div className="card-pro rounded-xl p-6 text-sm text-muted">{language === 'ar' ? 'لا توجد منتجات منشورة بعد.' : 'No published products yet.'}</div>
       ) : (

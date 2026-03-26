@@ -1,9 +1,12 @@
+import { NotificationType } from '@/lib/prisma-enums'
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getSessionUser } from '@/lib/session'
 import { productUpdateSchema } from '@/lib/validation'
 import { assertSameOrigin } from '@/lib/security'
 import { writeAuditLog } from '@/lib/audit'
+import { getRequestLanguage, i18nText } from '@/lib/request-language'
+import { notifyAdmins } from '@/lib/notifications'
 
 type Params = { params: Promise<{ id: string }> }
 
@@ -70,6 +73,27 @@ export async function PATCH(request: Request, { params }: Params) {
       entityId: updated.id,
     })
 
+    try {
+      const language = getRequestLanguage(request)
+      await notifyAdmins({
+        type: NotificationType.SYSTEM,
+        title: i18nText(language, 'تم تحديث منتج', 'Product updated'),
+        message: i18nText(
+          language,
+          `قام المورد ${user.name} بتحديث المنتج ${updated.name} (رقم: ${updated.id}).`,
+          `Supplier ${user.name} updated product ${updated.name} (id: ${updated.id}).`,
+        ),
+        data: {
+          productId: updated.id,
+          productName: updated.name,
+          supplierId: user.supplier.id,
+          supplierName: user.name,
+        },
+      })
+    } catch (error) {
+      console.error('Failed to notify admins about product update:', error)
+    }
+
     return NextResponse.json({ success: true, data: updated, message: 'Product updated' })
   } catch (error) {
     console.error('Failed to update product:', error)
@@ -106,6 +130,27 @@ export async function DELETE(request: Request, { params }: Params) {
       entityType: 'PRODUCT',
       entityId: id,
     })
+
+    try {
+      const language = getRequestLanguage(request)
+      await notifyAdmins({
+        type: NotificationType.SYSTEM,
+        title: i18nText(language, 'تم حذف منتج', 'Product deleted'),
+        message: i18nText(
+          language,
+          `قام المورد ${user.name} بحذف المنتج (معرف: ${id}).`,
+          `Supplier ${user.name} deleted product (id: ${id}).`,
+        ),
+        data: {
+          productId: id,
+          supplierId: user.supplier.id,
+          supplierName: user.name,
+        },
+      })
+    } catch (error) {
+      console.error('Failed to notify admins about product deletion:', error)
+    }
+
     return NextResponse.json({ success: true, message: 'Product deleted' })
   } catch (error) {
     console.error('Failed to delete product:', error)

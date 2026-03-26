@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
@@ -36,6 +36,15 @@ type Notification = {
   message?: string
   read: boolean
   createdAt: string
+  data?: {
+    kind?: string
+    role?: Role
+    roleLabel?: string
+    name?: string
+    email?: string
+    phone?: string
+    companyName?: string
+  }
 }
 
 type ConversationSummary = {
@@ -52,6 +61,7 @@ export default function Navbar() {
 
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [openNotifications, setOpenNotifications] = useState(false)
+  const [markingAll, setMarkingAll] = useState(false)
   const notificationRef = useRef<HTMLDivElement>(null)
   const notifBtnRef = useRef<HTMLButtonElement>(null)
   const [notifPos, setNotifPos] = useState<{ top: number; left: number }>({ top: 0, left: 0 })
@@ -93,6 +103,9 @@ export default function Navbar() {
     }
   }, [pathname])
 
+  const notificationSoundRef = useRef<HTMLAudioElement | null>(null)
+  const lastNotificationAtRef = useRef<string | null>(null)
+
   // Notifications poller (safe)
   useEffect(() => {
     if (!user) return
@@ -100,7 +113,25 @@ export default function Navbar() {
     const load = async () => {
       const data = await fetchJson('/api/notifications', { cache: 'no-store' })
       if (mounted && data?.success && Array.isArray(data.data)) {
-        setNotifications(data.data as Notification[])
+        const fetchedNotifications = data.data as Notification[]
+
+        // Play sound only when new unread notifications arrive (after first load)
+        const lastSeen = lastNotificationAtRef.current
+        const newUnread = fetchedNotifications.some((n) => {
+          if (n.read) return false
+          if (!lastSeen) return false
+          return new Date(n.createdAt) > new Date(lastSeen)
+        })
+
+        if (newUnread && notificationSoundRef.current) {
+          void notificationSoundRef.current.play().catch(() => {})
+        }
+
+        if (fetchedNotifications.length) {
+          lastNotificationAtRef.current = fetchedNotifications[0].createdAt
+        }
+
+        setNotifications(fetchedNotifications)
       }
     }
     load()
@@ -217,23 +248,50 @@ export default function Navbar() {
     router.refresh()
   }
 
+  async function markAllAsRead() {
+    if (!notifications.some((n) => !n.read)) {
+      return
+    }
+
+    setMarkingAll(true)
+    const previous = notifications
+    setNotifications((items) => items.map((item) => ({ ...item, read: true })))
+
+    try {
+      const data = await fetchJson('/api/notifications/read-all', { method: 'PATCH' })
+      if (!data?.success) {
+        throw new Error('Failed to mark all')
+      }
+    } catch {
+      setNotifications(previous)
+    } finally {
+      setMarkingAll(false)
+    }
+  }
+
   const dashboardHref = useMemo(() => {
     if (!user) return '/'
     if (user.role === 'ADMIN') return '/dashboard/admin'
-    if (user.role === 'SUPPLIER') return '/dashboard/supplier'
-    return '/dashboard/trader'
+    if (user.role === 'SUPPLIER') return '/supplier'
+    return '/trader'
   }, [user])
 
   const unreadNotifications = notifications.filter(n => !n.read).length
 
+  const roleLabels: Record<Role, { en: string; ar: string }> = {
+    ADMIN: { en: 'Admin', ar: 'مدير' },
+    SUPPLIER: { en: 'Supplier', ar: 'مورد' },
+    TRADER: { en: 'Trader', ar: 'تاجر' },
+  }
+
   const roleLabel = useMemo(() => {
-    const labels: Record<Role, { en: string; ar: string }> = {
-      ADMIN: { en: 'Admin', ar: 'مدير' },
-      SUPPLIER: { en: 'Supplier', ar: 'مورد' },
-      TRADER: { en: 'Trader', ar: 'تاجر' }
-    }
-    return language === 'ar' ? labels[user?.role || 'TRADER'].ar : labels[user?.role || 'TRADER'].en
+    return language === 'ar' ? roleLabels[user?.role || 'TRADER'].ar : roleLabels[user?.role || 'TRADER'].en
   }, [user, language])
+
+  const formatRoleLabel = (role?: Role, fallback?: string) => {
+    if (role) return language === 'ar' ? roleLabels[role].ar : roleLabels[role].en
+    return fallback ?? '-'
+  }
 
   const formatNotificationDate = (value: string) => {
     const date = new Date(value)
@@ -247,6 +305,7 @@ export default function Navbar() {
 
   return (
     <>
+      <audio ref={notificationSoundRef} src="/sound/soneynotification.mp3" preload="auto" />
       <header className="sticky mb-7 top-0 z-50 overflow-visible border-b border-white/10 bg-[color-mix(in_oklab(var(--app-surface),94%,transparent))] backdrop-blur-2xl shadow-[0_10px_30px_rgba(0,0,0,.08)]">
       <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[var(--app-primary)]/40 to-transparent" />
       <div className="container mx-auto px-4 lg:px-6">
@@ -290,7 +349,7 @@ export default function Navbar() {
                 value={query}
                 onChange={(e) => search(e.target.value)}
                 onFocus={() => setSearchOpen(true)}
-                placeholder={language === 'ar' ? 'ابحث عن منتجات، موردين، تجار...' : 'Search products, suppliers, traders...'}
+                placeholder={language === 'ar' ? 'ابحث في المنتجات، الموردين، التجار والصفقات...' : 'Search products, suppliers, traders & deals...'}
                 className="w-full rounded-2xl border border-white/10 bg-[color-mix(in_oklab(var(--app-surface),92%,transparent))] px-4 py-2.5 pr-10 text-sm placeholder:text-muted/70 focus:border-[var(--app-primary)]/50 focus:ring-2 focus:ring-[var(--app-primary)]/20 transition-all duration-300"
                 role="combobox"
                 aria-expanded={searchOpen}
@@ -367,7 +426,7 @@ export default function Navbar() {
     </header>
 
     {/* Secondary toolbar: language/theme + notifications/messages */}
-    <div className="absolute w-full px-20 top-16 lg:top-20 z-40 -mx-4 lg:-mx-6 lg:px-10 py-2 border-b border-white/10 bg-[color-mix(in_oklab(var(--app-surface),98%,transparent))] backdrop-blur-xl">
+    <div className="absolute inset-x-0 top-16 lg:top-20 z-40 px-4 lg:px-10 py-2 border-b border-white/10 bg-[color-mix(in_oklab(var(--app-surface),98%,transparent))] backdrop-blur-xl">
       <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
         {/* Left cluster: notifications + messages */}
         <div className="flex items-center gap-2">
@@ -379,7 +438,7 @@ export default function Navbar() {
             aria-expanded={openNotifications}
           >
             <BellIcon className="h-5 w-5" />
-            <span>{language === 'ar' ? 'إشعارات' : 'Notifications'}</span>
+            <span>{language === 'ar' ? 'الإشعارات' : 'Notifications'}</span>
             {unreadNotifications > 0 && (
               <span className="absolute -top-1 -right-1 inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-red-500 text-[11px] font-bold text-white px-1 shadow">
                 {unreadNotifications}
@@ -434,7 +493,7 @@ export default function Navbar() {
             </div>
             <div className="flex-1">
               <h3 className="font-bold text-lg text-app">{language === 'ar' ? 'الإشعارات' : 'Notifications'}</h3>
-              <p className="text-xs text-muted/70">{language === 'ar' ? 'ابقَ على اطلاع بآخر الأحداث' : 'Stay updated with latest events'}</p>
+              <p className="text-xs text-muted/70">{language === 'ar' ? 'ابقَ على اطّلاع بآخر المستجدات' : 'Stay updated with latest events'}</p>
             </div>
             <button
               onClick={() => setOpenNotifications(false)}
@@ -451,69 +510,89 @@ export default function Navbar() {
                   <BellIcon className="h-8 w-8 text-muted/40" />
                 </div>
                 <p className="text-base font-semibold text-muted mb-2">{language === 'ar' ? 'لا توجد إشعارات حالياً' : 'No notifications yet'}</p>
-                <p className="text-sm text-muted/60">{language === 'ar' ? 'سنخبرك عندما يحدث شيء جديد' : 'We\'ll notify you when something new happens'}</p>
+                <p className="text-sm text-muted/60">{language === 'ar' ? 'سنخبرك عند وجود جديد' : 'We\'ll notify you when something new happens'}</p>
               </div>
             ) : (
               <div className="p-3 space-y-2">
-                {notifications.map((n, index) => (
-                  <div
-                    key={n.id}
-                    className={`group relative flex items-start gap-4 rounded-2xl p-4 transition-all duration-300 hover:scale-[1.02] cursor-pointer ${
-                      n.read
-                        ? 'bg-gradient-to-r from-white/5 to-white/10 hover:from-white/10 hover:to-white/15'
-                        : 'bg-gradient-to-r from-[var(--app-primary)]/10 via-[var(--app-primary)]/15 to-[var(--app-primary)]/10 hover:from-[var(--app-primary)]/15 hover:via-[var(--app-primary)]/20 hover:to-[var(--app-primary)]/15 shadow-lg shadow-[var(--app-primary)]/20'
-                    } border border-white/10 hover:border-white/20`}
-                  >
-                    {/* Notification indicator */}
-                    <div className={`mt-1 h-3 w-3 rounded-full flex-shrink-0 transition-all duration-300 ${
-                      n.read
-                        ? 'bg-muted/40 group-hover:bg-muted/60'
-                        : 'bg-gradient-to-r from-[var(--app-primary)] to-[var(--app-primary)]/80 shadow-lg shadow-[var(--app-primary)]/50'
-                    }`} />
+                {notifications.map((n) => {
+                  const isRegistration = n.data?.kind === 'REGISTRATION_PENDING'
+                  const displayTitle = isRegistration
+                    ? (language === 'ar' ? 'طلب تسجيل جديد بانتظار المراجعة' : 'New registration pending approval')
+                    : n.title
+                  const detailItems = isRegistration
+                    ? [
+                        { label: language === 'ar' ? 'الاسم' : 'Name', value: n.data?.name },
+                        { label: language === 'ar' ? 'الدور' : 'Role', value: formatRoleLabel(n.data?.role, n.data?.roleLabel) },
+                        { label: language === 'ar' ? 'البريد الإلكتروني' : 'Email', value: n.data?.email },
+                        { label: language === 'ar' ? 'الهاتف' : 'Phone', value: n.data?.phone },
+                        { label: language === 'ar' ? 'الشركة' : 'Company', value: n.data?.companyName },
+                      ]
+                    : []
 
-                    {/* Notification icon based on type */}
-                    <div className={`h-10 w-10 rounded-xl flex-shrink-0 flex items-center justify-center transition-all duration-300 ${
-                      n.read
-                        ? 'bg-gradient-to-br from-gray-500/20 to-gray-600/20'
-                        : 'bg-gradient-to-br from-[var(--app-primary)]/20 to-[var(--app-primary)]/30 shadow-lg'
-                    }`}>
-                      <div className={`h-5 w-5 rounded-lg ${
-                        n.read ? 'bg-gray-400' : 'bg-gradient-to-r from-[var(--app-primary)] to-[var(--app-primary)]/80'
+                  return (
+                    <div
+                      key={n.id}
+                      className={`group relative flex items-start gap-4 rounded-2xl p-4 transition-all duration-300 hover:scale-[1.02] cursor-pointer ${
+                        n.read
+                          ? 'bg-gradient-to-r from-white/5 to-white/10 hover:from-white/10 hover:to-white/15'
+                          : 'bg-gradient-to-r from-[var(--app-primary)]/10 via-[var(--app-primary)]/15 to-[var(--app-primary)]/10 hover:from-[var(--app-primary)]/15 hover:via-[var(--app-primary)]/20 hover:to-[var(--app-primary)]/15 shadow-lg shadow-[var(--app-primary)]/20'
+                      } border border-white/10 hover:border-white/20`}
+                    >
+                      <div className={`mt-1 h-3 w-3 rounded-full flex-shrink-0 transition-all duration-300 ${
+                        n.read
+                          ? 'bg-muted/40 group-hover:bg-muted/60'
+                          : 'bg-gradient-to-r from-[var(--app-primary)] to-[var(--app-primary)]/80 shadow-lg shadow-[var(--app-primary)]/50'
                       }`} />
-                    </div>
 
-                    {/* Notification content */}
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="min-w-0 flex-1">
-                          <p className={`font-bold text-sm leading-tight transition-colors ${
-                            n.read ? 'text-app/80' : 'text-app'
-                          }`}>
-                            {n.title}
-                          </p>
-                          {n.message && (
-                            <p className="mt-1.5 text-sm text-muted leading-relaxed line-clamp-2">
-                              {n.message}
+                      <div className={`h-10 w-10 rounded-xl flex-shrink-0 flex items-center justify-center transition-all duration-300 ${
+                        n.read
+                          ? 'bg-gradient-to-br from-gray-500/20 to-gray-600/20'
+                          : 'bg-gradient-to-br from-[var(--app-primary)]/20 to-[var(--app-primary)]/30 shadow-lg'
+                      }`}>
+                        <div className={`h-5 w-5 rounded-lg ${
+                          n.read ? 'bg-gray-400' : 'bg-gradient-to-r from-[var(--app-primary)] to-[var(--app-primary)]/80'
+                        }`} />
+                      </div>
+
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0 flex-1">
+                            <p className={`font-bold text-sm leading-tight transition-colors ${
+                              n.read ? 'text-app/80' : 'text-app'
+                            }`}>
+                              {displayTitle}
                             </p>
+                            {isRegistration ? (
+                              <div className="mt-2 space-y-1 text-xs text-muted">
+                                {detailItems.map((item) => (
+                                  <div key={item.label} className="flex items-center justify-between gap-3">
+                                    <span className="font-semibold text-muted">{item.label}</span>
+                                    <span className="text-app/90 truncate">{item.value || '-'}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : n.message ? (
+                              <p className="mt-1.5 text-sm text-muted leading-relaxed line-clamp-2">
+                                {n.message}
+                              </p>
+                            ) : null}
+                          </div>
+                        </div>
+
+                        <div className="flex items-center justify-between mt-3">
+                          <p className="text-xs font-medium text-muted/70">
+                            {formatNotificationDate(n.createdAt)}
+                          </p>
+                          {!n.read && (
+                            <div className="h-2 w-2 rounded-full bg-[var(--app-primary)] animate-pulse" />
                           )}
                         </div>
                       </div>
 
-                      {/* Timestamp and actions */}
-                      <div className="flex items-center justify-between mt-3">
-                        <p className="text-xs font-medium text-muted/70">
-                          {formatNotificationDate(n.createdAt)}
-                        </p>
-                        {!n.read && (
-                          <div className="h-2 w-2 rounded-full bg-[var(--app-primary)] animate-pulse" />
-                        )}
-                      </div>
+                      <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-transparent via-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
                     </div>
-
-                    {/* Hover effect overlay */}
-                    <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-transparent via-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             )}
           </div>
@@ -521,7 +600,11 @@ export default function Navbar() {
           {/* Footer with mark all as read */}
           {notifications.length > 0 && (
             <div className="px-6 py-3 border-t border-white/20 bg-gradient-to-r from-[color-mix(in_oklab(var(--app-surface),90%,transparent))] to-[color-mix(in_oklab(var(--app-surface),85%,transparent))] backdrop-blur-2xl">
-              <button className="w-full flex items-center justify-center gap-2 py-2 px-4 rounded-xl bg-gradient-to-r from-[var(--app-primary)]/10 to-[var(--app-primary)]/20 hover:from-[var(--app-primary)]/20 hover:to-[var(--app-primary)]/30 text-sm font-semibold text-[var(--app-primary)] transition-all duration-200 hover:scale-105 border border-[var(--app-primary)]/20">
+              <button
+                onClick={markAllAsRead}
+                disabled={markingAll || unreadNotifications === 0}
+                className="w-full flex items-center justify-center gap-2 py-2 px-4 rounded-xl bg-gradient-to-r from-[var(--app-primary)]/10 to-[var(--app-primary)]/20 hover:from-[var(--app-primary)]/20 hover:to-[var(--app-primary)]/30 text-sm font-semibold text-[var(--app-primary)] transition-all duration-200 hover:scale-105 border border-[var(--app-primary)]/20 disabled:opacity-60 disabled:cursor-not-allowed"
+              >
                 <span>{language === 'ar' ? 'تحديد الكل كمقروء' : 'Mark all as read'}</span>
               </button>
             </div>
@@ -532,3 +615,4 @@ export default function Navbar() {
     </>
   )
 }
+

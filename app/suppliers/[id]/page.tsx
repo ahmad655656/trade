@@ -76,8 +76,8 @@ export default function SupplierProfilePage({ params }: { params: Promise<{ id: 
         <div className="flex flex-wrap items-center gap-3">
           <h1 className="text-2xl font-bold text-app">{data.supplier.companyName}</h1>
           {data.supplier.verified ? (
-            <span className="rounded-full bg-emerald-500/15 px-2.5 py-1 text-xs text-emerald-600">
-              {language === 'ar' ? 'مورد موثّق' : 'Verified Supplier'}
+            <span className="rounded-full bg-emerald-500/15 px-2.5 py-1 text-xs font-semibold text-emerald-600">
+              {language === 'ar' ? 'مورد معتمد' : 'Certified Supplier'}
             </span>
           ) : null}
         </div>
@@ -87,8 +87,8 @@ export default function SupplierProfilePage({ params }: { params: Promise<{ id: 
       </section>
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-        <MetricCard labelAr="متوسط التقييم" labelEn="Average rating" value={`${data.metrics.averageRating.toFixed(2)} / 5`} />
-        <MetricCard labelAr="عدد التقييمات" labelEn="Total reviews" value={String(data.metrics.totalReviews)} />
+        <MetricCard labelAr="التقييم المتوسط" labelEn="Avg Rating" value={`${data.metrics.averageRating.toFixed(2)}★`} />
+        <MetricCard labelAr="إجمالي التقييمات" labelEn="Total Reviews" value={String(data.metrics.totalReviews)} />
         <MetricCard labelAr="طلبات مكتملة" labelEn="Completed orders" value={String(data.metrics.totalCompletedOrders)} />
         <MetricCard labelAr="نسبة إكمال الطلبات" labelEn="Completion rate" value={`${data.metrics.orderCompletionRate.toFixed(1)}%`} />
         <MetricCard labelAr="متوسط الشحن (يوم)" labelEn="Avg shipping (days)" value={data.metrics.averageShippingTimeDays.toFixed(1)} />
@@ -96,7 +96,7 @@ export default function SupplierProfilePage({ params }: { params: Promise<{ id: 
 
       <section className="card-pro rounded-xl p-4">
 <div className="flex items-center gap-3 mb-4">
-          <h2 className="text-lg font-semibold text-app">{language === 'ar' ? 'كتالوج المنتجات' : 'Product catalog'}</h2>
+          <h2 className="text-lg font-semibold text-app">{language === 'ar' ? 'الكتالوج التجاري' : 'Business Catalog'}</h2>
           <Link href={`/suppliers/${id}/products`} className="text-primary text-sm font-medium hover:underline">
             {language === 'ar' ? 'عرض الكل' : 'View all'}
           </Link>

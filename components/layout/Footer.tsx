@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useUi } from '@/components/providers/UiProvider'
 import { EnvelopeIcon, PhoneIcon, MapPinIcon } from '@heroicons/react/24/outline'
+import { SUPPORT_EMAIL, SUPPORT_PHONE, SUPPORT_ADDRESS } from '@/lib/constants'
 
 type FooterLink = {
   ar: string
@@ -90,15 +91,15 @@ export default function Footer() {
             <div className="mt-5 space-y-2">
               <div className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-muted">
                 <EnvelopeIcon className="h-4 w-4 text-[var(--app-primary)]" />
-                <span dir="ltr">support@tradeplatform.com</span>
+                <span dir="ltr">{SUPPORT_EMAIL}</span>
               </div>
               <div className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-muted">
                 <PhoneIcon className="h-4 w-4 text-[var(--app-primary)]" />
-                <span dir="ltr">+966 55 123 4567</span>
+                <span dir="ltr">{SUPPORT_PHONE}</span>
               </div>
               <div className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-muted">
                 <MapPinIcon className="h-4 w-4 text-[var(--app-primary)]" />
-                <span>{isArabic ? 'الرياض، المملكة العربية السعودية' : 'Riyadh, Saudi Arabia'}</span>
+                <span>{SUPPORT_ADDRESS}</span>
               </div>
             </div>
           </div>

@@ -10,6 +10,7 @@ import { calculatePlatformFee, getPlatformCommissionRate } from '@/lib/commissio
 import { appendOrderTimelineEvent } from '@/lib/order-timeline'
 import { writeAuditLog } from '@/lib/audit'
 import { sanitizePlainText } from '@/lib/sanitize'
+import { isSchemaOutOfSyncError, SCHEMA_OUT_OF_SYNC_MESSAGE } from '@/lib/prisma-errors'
 
 type TxClient = Omit<typeof prisma, '$connect' | '$disconnect' | '$on' | '$transaction' | '$extends' | '$use'>
 
@@ -50,18 +51,17 @@ export async function POST(request: Request) {
     const receiptUrl = sanitizePlainText(body.receiptUrl, 600)
     const notes = sanitizePlainText(body.notes, 2000)
 
-    if (!senderPhone || !transferTo || !receiptUrl) {
-      return NextResponse.json(
-        { success: false, error: i18nText(language, 'يجب إدخال رقم المرسل ورقم التحويل وصورة الوصل', 'senderPhone, transferTo and receipt image are required') },
-        { status: 400 },
-      )
-    }
+    const hasManualPayment = Boolean(senderPhone && transferTo && receiptUrl)
 
-    if (!receiptUrl.startsWith('/uploads/receipts/')) {
-      return NextResponse.json(
-        { success: false, error: i18nText(language, 'يجب رفع صورة الوصل من الجهاز أولاً', 'Please upload the receipt image first') },
-        { status: 400 },
-      )
+    if (hasManualPayment) {
+      const isLocalReceipt = receiptUrl.startsWith('/uploads/receipts/')
+      const isRemoteReceipt = /^https?:\/\//i.test(receiptUrl)
+      if (!isLocalReceipt && !isRemoteReceipt) {
+        return NextResponse.json(
+          { success: false, error: i18nText(language, 'يجب رفع صورة الوصل من الجهاز أولاً', 'Please upload the receipt image first') },
+          { status: 400 },
+        )
+      }
     }
 
     const cart = await prisma.cart.findUnique({
@@ -83,6 +83,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, error: i18nText(language, 'السلة فارغة', 'Cart is empty') }, { status: 400 })
     }
 
+    if (!cart || cart.items.length === 0) {
+      return NextResponse.json({ success: false, error: i18nText(language, 'السلة فارغة', 'Cart is empty') }, { status: 400 })
+    }
+
     for (const item of cart.items) {
       if (item.product.status !== ProductStatus.ACTIVE) {
         return NextResponse.json(
@@ -97,6 +101,10 @@ export async function POST(request: Request) {
         )
       }
     }
+    const defaultAddress = await prisma.address.findFirst({
+      where: { userId: user.id },
+      orderBy: [{ isDefault: 'desc' }, { updatedAt: 'desc' }],
+    })
 
     const subtotal = Number(
       cart.items.reduce((sum: number, item: CheckoutCartItem) => sum + item.quantity * item.price, 0).toFixed(2),
@@ -109,14 +117,17 @@ export async function POST(request: Request) {
     const platformFee = calculatePlatformFee(subtotal, platformCommissionRate)
     const supplierAmount = Number((subtotal - platformFee).toFixed(2))
     const orderNumber = `ORD-${Date.now()}-${Math.floor(Math.random() * 1000)}`
-    const manualPaymentPayload = {
-      senderPhone,
-      transferTo,
-      receiptUrl,
-      notes: notes || null,
-      submittedAt: new Date().toISOString(),
-      purpose: 'PLATFORM_FEE',
-    }
+
+    const manualPaymentPayload = hasManualPayment
+      ? {
+          senderPhone,
+          transferTo,
+          receiptUrl,
+          notes: notes || null,
+          submittedAt: new Date().toISOString(),
+          purpose: 'PLATFORM_FEE',
+        }
+      : null
 
     const created = await prisma.$transaction(async (tx: TxClient) => {
       const order = await tx.order.create({
@@ -134,6 +145,7 @@ export async function POST(request: Request) {
           paymentStatus: 'PENDING',
           shippingStatus: 'PENDING',
           paymentMethod: 'BANK_TRANSFER',
+          shippingAddressId: defaultAddress?.id ?? null,
           items: {
             create: cart.items.map((item: CheckoutCartItem) => ({
               productId: item.productId,
@@ -153,7 +165,7 @@ export async function POST(request: Request) {
               supplierAmount,
               status: 'PENDING',
               method: PaymentMethod.BANK_TRANSFER,
-              refundReason: JSON.stringify(manualPaymentPayload),
+              refundReason: manualPaymentPayload ? JSON.stringify(manualPaymentPayload) : null,
             },
           },
         },
@@ -167,20 +179,25 @@ export async function POST(request: Request) {
         note: i18nText(language, 'تم إنشاء الطلب وبانتظار دفع عمولة المنصة', 'Order created and waiting for platform fee payment'),
       })
 
-      const movedToVerification = await tx.order.update({
-        where: { id: order.id },
-        data: {
-          status: 'WAITING_FOR_PAYMENT_VERIFICATION',
-        },
-      })
+      let resultOrder = order
+      if (hasManualPayment) {
+        const movedToVerification = await tx.order.update({
+          where: { id: order.id },
+          data: {
+            status: 'WAITING_FOR_PAYMENT_VERIFICATION',
+          },
+        })
 
-      await appendOrderTimelineEvent(tx, {
-        orderId: order.id,
-        status: 'WAITING_FOR_PAYMENT_VERIFICATION',
-        actorUserId: user.id,
-        language,
-        note: i18nText(language, 'تم إرسال وصل التحويل وبانتظار اعتماد الإدارة', 'Receipt submitted and waiting admin verification'),
-      })
+        await appendOrderTimelineEvent(tx, {
+          orderId: order.id,
+          status: 'WAITING_FOR_PAYMENT_VERIFICATION',
+          actorUserId: user.id,
+          language,
+          note: i18nText(language, 'تم إرسال وصل التحويل وبانتظار اعتماد الإدارة', 'Receipt submitted and waiting admin verification'),
+        })
+
+        resultOrder = movedToVerification
+      }
 
       for (const item of cart.items) {
         await tx.product.update({
@@ -194,48 +211,71 @@ export async function POST(request: Request) {
 
       await tx.cartItem.deleteMany({ where: { cartId: cart.id } })
 
-      return movedToVerification
+      return resultOrder
     })
 
-    await recalculateCartTotals(cart.id)
+    try {
+      await recalculateCartTotals(cart.id)
+    } catch (error) {
+      console.error('Failed to recalculate cart totals:', error)
+    }
+    try {
+      await notifyAdmins({
+        type: NotificationType.ORDER_CREATED,
+        title: i18nText(language, `طلب عمولة المنصة ${created.orderNumber}`, `Platform fee order ${created.orderNumber}`),
+        message: i18nText(
+          language,
+          `تم إرسال إثبات عمولة المنصة. المرسل: ${senderPhone}، التحويل إلى: ${transferTo}.`,
+          `Platform fee proof submitted. Sender: ${senderPhone}, transfer to: ${transferTo}.`,
+        ),
+        data: {
+          orderId: created.id,
+          orderNumber: created.orderNumber,
+          senderPhone,
+          transferTo,
+          receiptUrl,
+          platformFee,
+        },
+      })
+    } catch (error) {
+      console.error('Failed to notify admins:', error)
+    }
 
-    const supplierUserIds = Array.from(new Set(cart.items.map((item: CheckoutCartItem) => item.product.supplier.user.id)))
-
-    await notifyAdmins({
-      type: NotificationType.ORDER_CREATED,
-      title: i18nText(language, `طلب عمولة منصة ${created.orderNumber}`, `Platform fee order ${created.orderNumber}`),
-      message: i18nText(
-        language,
-        `تم إرسال إثبات عمولة المنصة. المرسل: ${senderPhone}، التحويل إلى: ${transferTo}.`,
-        `Platform fee proof submitted. Sender: ${senderPhone}, transfer to: ${transferTo}.`,
-      ),
-      data: {
-        orderId: created.id,
-        orderNumber: created.orderNumber,
-        senderPhone,
-        transferTo,
-        receiptUrl,
-        platformFee,
-      },
-    })
-
-    await notifyUsers({
-      userIds: [user.id, ...supplierUserIds],
-      type: NotificationType.SYSTEM,
-      title: i18nText(language, 'تم إنشاء الطلب', 'Order placed'),
-      message: i18nText(
-        language,
-        `تم إنشاء الطلب ${created.orderNumber} وهو بانتظار تحقق عمولة المنصة.`,
-        `Order ${created.orderNumber} created and waiting platform fee verification.`,
-      ),
-      data: { orderId: created.id, orderNumber: created.orderNumber },
-    })
+    try {
+      if (hasManualPayment) {
+        await notifyUsers({
+          userIds: [user.id],
+          type: NotificationType.SYSTEM,
+          title: i18nText(language, 'تم إرسال إثبات الدفع', 'Payment proof submitted'),
+          message: i18nText(
+            language,
+            `تم إنشاء الطلب ${created.orderNumber} وتم إرسال إثبات التحويل، بانتظار التأكيد من الإدارة.`,
+            `Order ${created.orderNumber} created and payment proof submitted. Waiting admin confirmation.`,
+          ),
+          data: { orderId: created.id, orderNumber: created.orderNumber, status: 'WAITING_FOR_PAYMENT_VERIFICATION' },
+        })
+      } else {
+        await notifyUsers({
+          userIds: [user.id],
+          type: NotificationType.SYSTEM,
+          title: i18nText(language, 'تم إنشاء طلب جديد', 'New order created'),
+          message: i18nText(
+            language,
+            `تم إنشاء الطلب ${created.orderNumber}. يرجى دفع عمولة المنصة وإرسال الوصل من صفحة الطلبات.`, 
+            `Order ${created.orderNumber} created. Please pay the platform fee and submit the receipt from Orders page.`,
+          ),
+          data: { orderId: created.id, orderNumber: created.orderNumber, status: 'PENDING_PLATFORM_FEE_PAYMENT' },
+        })
+      }
+    } catch (error) {
+      console.error('Failed to notify users:', error)
+    }
 
     await writeAuditLog({
       request,
       actorUserId: user.id,
       actorRole: user.role,
-      action: 'ORDER_CHECKOUT_MANUAL_PLATFORM_FEE',
+      action: hasManualPayment ? 'ORDER_CHECKOUT_MANUAL_PLATFORM_FEE' : 'ORDER_CHECKOUT',
       entityType: 'ORDER',
       entityId: created.id,
       metadata: {
@@ -251,15 +291,26 @@ export async function POST(request: Request) {
         data: created,
         message: i18nText(
           language,
-          'تم إنشاء الطلب وإرسال إثبات عمولة المنصة. بانتظار التحقق اليدوي.',
-          'Order placed and platform fee proof submitted. Waiting manual verification.',
+          hasManualPayment ? 'تم إنشاء الطلب وإرسال إثبات عمولة المنصة. بانتظار التحقق اليدوي ثم مراجعة الإدارة.' : 'تم إنشاء الطلب. يرجى دفع عمولة المنصة وإرسال الوصل من صفحة الطلبات.',
+          hasManualPayment ? 'Order placed and platform fee proof submitted. Waiting manual verification and admin review.' : 'Order placed. Please pay platform fee and submit receipt from Orders page.',
         ),
       },
       { status: 201 },
     )
   } catch (error) {
     console.error('Failed to checkout:', error)
+    if (isSchemaOutOfSyncError(error)) {
+      return NextResponse.json({ success: false, error: SCHEMA_OUT_OF_SYNC_MESSAGE }, { status: 503 })
+    }
     return NextResponse.json({ success: false, error: 'Failed to checkout' }, { status: 500 })
   }
 }
+
+
+
+
+
+
+
+
 

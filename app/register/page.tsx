@@ -6,34 +6,11 @@ import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
+import { registerSchema } from '@/lib/validation'
 import toast from 'react-hot-toast'
 import { useUi } from '@/components/providers/UiProvider'
 
-const schema = (language: 'ar' | 'en') =>
-  z
-    .object({
-      name: z
-        .string()
-        .min(2, language === 'ar' ? 'الاسم يجب أن يكون حرفين على الأقل' : 'Name must be at least 2 characters'),
-      email: z.string().email(language === 'ar' ? 'أدخل بريدًا إلكترونيًا صحيحًا' : 'Enter a valid email'),
-      phone: z.string().optional(),
-      role: z.enum(['TRADER', 'SUPPLIER']),
-      companyName: z.string().optional(),
-      password: z
-        .string()
-        .min(8, language === 'ar' ? 'الحد الأدنى 8 أحرف' : 'Minimum 8 characters')
-        .regex(/[A-Z]/, language === 'ar' ? 'يجب إدخال حرف كبير واحد على الأقل' : 'Include at least one uppercase letter')
-        .regex(/[a-z]/, language === 'ar' ? 'يجب إدخال حرف صغير واحد على الأقل' : 'Include at least one lowercase letter')
-        .regex(/[0-9]/, language === 'ar' ? 'يجب إدخال رقم واحد على الأقل' : 'Include at least one number')
-        .regex(/[^A-Za-z0-9]/, language === 'ar' ? 'يجب إدخال رمز خاص واحد على الأقل' : 'Include at least one special character'),
-      confirmPassword: z.string(),
-    })
-    .refine((data) => data.password === data.confirmPassword, {
-      message: language === 'ar' ? 'تأكيد كلمة المرور غير مطابق' : 'Password confirmation does not match',
-      path: ['confirmPassword'],
-    })
-
-type FormValues = z.infer<ReturnType<typeof schema>>
+type FormValues = z.infer<typeof registerSchema>
 
 export default function RegisterPage() {
   const router = useRouter()
@@ -46,21 +23,37 @@ export default function RegisterPage() {
     handleSubmit,
     formState: { errors },
   } = useForm<FormValues>({
-    resolver: zodResolver(schema(language)),
+    resolver: zodResolver(registerSchema),
     defaultValues: {
       role: 'TRADER',
+      termsAccepted: false,
     },
   })
 
   const selectedRole = watch('role')
 
   const onSubmit = async (payload: FormValues) => {
+    const requestBody: FormValues = {
+      email: payload.email,
+      password: payload.password,
+      confirmPassword: payload.confirmPassword,
+      name: payload.name,
+      role: payload.role,
+      phone: payload.phone,
+      companyName: payload.companyName,
+      commercialRegister: payload.commercialRegister,
+      taxNumber: payload.taxNumber,
+      termsAccepted: payload.termsAccepted,
+    }
+
     setIsLoading(true)
     try {
       const response = await fetch('/api/auth/register', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody),
       })
 
       const result = await response.json()
@@ -68,16 +61,14 @@ export default function RegisterPage() {
         throw new Error(result.error ?? 'Registration failed')
       }
 
-      toast.success(language === 'ar' ? 'تم إنشاء الحساب وتسجيل الدخول بنجاح!' : 'Account created and logged in successfully!')
-
-      // Auto-redirect to dashboard based on role
-      const role = result.data.user.role
-      if (role === 'SUPPLIER') router.push('/dashboard/supplier')
-      else router.push('/dashboard/trader')
-      
-      router.refresh()
+      toast.success(
+        language === 'ar'
+          ? 'تم إرسال طلب التسجيل. سيصلك بريد عند الموافقة.'
+          : 'Registration submitted. You will receive an email once approved.',
+      )
+      router.push('/login')
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : language === 'ar' ? 'فشل إنشاء الحساب' : 'Registration failed')
+      toast.error(error instanceof Error ? error.message : language === 'ar' ? 'فشل' : 'Failed')
     } finally {
       setIsLoading(false)
     }
@@ -90,45 +81,71 @@ export default function RegisterPage() {
 
       <form className="mt-6 grid gap-4 md:grid-cols-2" onSubmit={handleSubmit(onSubmit)}>
         <div className="md:col-span-2">
-          <label className="block text-sm font-medium text-app">{t('register.accountType')}</label>
+          <label className="block text-sm font-medium text-app">نوع الحساب</label>
           <select {...register('role')} className="input-pro mt-1">
-            <option value="TRADER">{t('register.trader')}</option>
-            <option value="SUPPLIER">{t('register.supplier')}</option>
+            <option value="TRADER">تاجر</option>
+            <option value="SUPPLIER">مورد</option>
           </select>
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-app">{t('register.name')}</label>
+          <label className="block text-sm font-medium text-app">الاسم الكامل</label>
           <input {...register('name')} className="input-pro mt-1" />
           {errors.name && <p className="mt-1 text-sm text-red-500">{errors.name.message}</p>}
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-app">{t('register.phone')}</label>
+          <label className="block text-sm font-medium text-app">رقم الهاتف (إلزامي للتحقق)</label>
           <input {...register('phone')} className="input-pro mt-1" dir="ltr" />
+          {errors.phone && <p className="mt-1 text-sm text-red-500">{errors.phone.message}</p>}
         </div>
 
         <div className="md:col-span-2">
-          <label className="block text-sm font-medium text-app">{t('register.email')}</label>
+          <label className="block text-sm font-medium text-app">البريد الإلكتروني</label>
           <input {...register('email')} type="email" className="input-pro mt-1" dir="ltr" />
           {errors.email && <p className="mt-1 text-sm text-red-500">{errors.email.message}</p>}
         </div>
 
-        {selectedRole === 'SUPPLIER' && (
-          <div className="md:col-span-2">
-            <label className="block text-sm font-medium text-app">{t('register.company')}</label>
-            <input {...register('companyName')} className="input-pro mt-1" />
-          </div>
-        )}
+        <div className="md:col-span-2">
+          <label className="block text-sm font-medium text-app">اسم الشركة / المتجر (إلزامي للتحقق)</label>
+          <input {...register('companyName')} className="input-pro mt-1" />
+          {errors.companyName && <p className="mt-1 text-sm text-red-500">{errors.companyName.message}</p>}
+        </div>
+
+        <div className="md:col-span-2">
+          <label className="block text-sm font-medium text-app">السجل التجاري / الرقم الضريبي (إلزامي)</label>
+          <input {...register('commercialRegister')} className="input-pro mt-1" />
+          {errors.commercialRegister && <p className="mt-1 text-sm text-red-500">{errors.commercialRegister.message}</p>}
+        </div>
+
+        <div className="md:col-span-2">
+          <label className="block text-sm font-medium text-app">رقم السجل الضريبي (إلزامي)</label>
+          <input {...register('taxNumber')} className="input-pro mt-1" dir="ltr" />
+          {errors.taxNumber && <p className="mt-1 text-sm text-red-500">{errors.taxNumber.message}</p>}
+        </div>
+
+        <div className="md:col-span-2">
+          <label className="block text-sm font-medium text-app">صورة الهوية / السجل التجاري (إلزامي للموافقة)</label>
+          <input type="file" accept="image/*,.pdf" className="input-pro mt-1 file-input" />
+          {/* File validation handled server-side */}
+        </div>
+
+        <div className="md:col-span-2">
+          <label className="flex items-center gap-2">
+            <input type="checkbox" {...register('termsAccepted')} />
+            أوافق على شروط الخدمة والخصوصية، وأفهم أن الحساب يتطلب موافقة التحقق
+          </label>
+          {errors.termsAccepted && <p className="mt-1 text-sm text-red-500">{errors.termsAccepted.message}</p>}
+        </div>
 
         <div>
-          <label className="block text-sm font-medium text-app">{t('register.password')}</label>
+          <label className="block text-sm font-medium text-app">كلمة المرور</label>
           <input {...register('password')} type="password" className="input-pro mt-1" dir="ltr" />
           {errors.password && <p className="mt-1 text-sm text-red-500">{errors.password.message}</p>}
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-app">{t('register.confirmPassword')}</label>
+          <label className="block text-sm font-medium text-app">تأكيد كلمة المرور</label>
           <input {...register('confirmPassword')} type="password" className="input-pro mt-1" dir="ltr" />
           {errors.confirmPassword && <p className="mt-1 text-sm text-red-500">{errors.confirmPassword.message}</p>}
         </div>

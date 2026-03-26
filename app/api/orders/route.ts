@@ -51,7 +51,9 @@ export async function GET() {
           paymentStatus: 'PAID',
           status: {
             in: [
+              'WAITING_FOR_ADMIN_REVIEW',
               'PLATFORM_FEE_CONFIRMED',
+              'ADMIN_APPROVED',
               'SUPPLIER_PREPARING_ORDER',
               'SHIPPED',
               'AWAITING_DELIVERY_CONFIRMATION',
@@ -85,6 +87,19 @@ export async function GET() {
             include: {
               product: { select: { id: true, name: true, nameAr: true, nameEn: true } },
               supplier: { include: { user: { select: { id: true, name: true, email: true } } } },
+            },
+          },
+          address: {
+            select: {
+              id: true,
+              title: true,
+              recipient: true,
+              phone: true,
+              country: true,
+              city: true,
+              state: true,
+              address: true,
+              postalCode: true,
             },
           },
           payment: true,
@@ -133,6 +148,10 @@ export async function POST(request: Request) {
     if (!product) {
       return NextResponse.json({ success: false, error: i18nText(language, 'المنتج غير متاح أو غير متوفر بالمخزون', 'Product unavailable or out of stock') }, { status: 400 })
     }
+    const defaultAddress = await prisma.address.findFirst({
+      where: { userId: user.id },
+      orderBy: [{ isDefault: 'desc' }, { updatedAt: 'desc' }],
+    })
 
     const subtotal = Number((product.price * body.quantity).toFixed(2))
     const shipping = 0
@@ -159,6 +178,7 @@ export async function POST(request: Request) {
           paymentStatus: 'PENDING',
           shippingStatus: 'PENDING',
           paymentMethod: 'BANK_TRANSFER',
+          shippingAddressId: defaultAddress?.id ?? null,
           items: {
             create: [
               {
@@ -216,13 +236,13 @@ export async function POST(request: Request) {
     })
 
     await notifyUsers({
-      userIds: [user.id, product.supplier.user.id],
+      userIds: [user.id],
       type: 'SYSTEM',
       title: i18nText(language, 'تم إنشاء طلب جديد', 'New order created'),
       message: i18nText(
         language,
-        `تم إنشاء الطلب ${created.orderNumber}. سيصبح مرئياً للمورد بعد اعتماد عمولة المنصة.`,
-        `Order ${created.orderNumber} created. It will be visible to supplier after platform fee approval.`,
+        `تم إنشاء الطلب ${created.orderNumber}. سيصبح مرئياً للمورد بعد اعتماد عمولة المنصة ومراجعة الإدارة.`,
+        `Order ${created.orderNumber} created. It will be visible to supplier after platform fee approval and admin review.`,
       ),
       data: { orderId: created.id, orderNumber: created.orderNumber },
     })
@@ -250,4 +270,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: false, error: 'Failed to create order' }, { status: 500 })
   }
 }
+
+
+
+
 

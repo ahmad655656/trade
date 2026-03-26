@@ -1,9 +1,10 @@
-﻿'use client'
+'use client'
 
 import { useEffect, useMemo, useState } from 'react'
 import { useUi } from '@/components/providers/UiProvider'
 import { formatSypAmount } from '@/lib/currency'
 import { orderStatusLabel, paymentStatusLabel, shippingStatusLabel } from '@/lib/order-labels'
+import { SYRIATEL_CASH_NUMBER, SUPPORT_EMAIL, SUPPORT_PHONE } from '@/lib/constants'
 import ReviewModal, { ReviewFormData } from '@/components/trader/ReviewModal'
 
 type Order = {
@@ -14,6 +15,7 @@ type Order = {
   paymentStatus: string
   shippingStatus: string
   createdAt: string
+  estimatedDelivery: string | null
   trackingNumber: string | null
   payment: {
     refundReason: string | null
@@ -106,6 +108,8 @@ export default function TraderOrdersPage() {
           'PENDING_PLATFORM_FEE_PAYMENT',
           'WAITING_FOR_PAYMENT_VERIFICATION',
           'PLATFORM_FEE_CONFIRMED',
+          'WAITING_FOR_ADMIN_REVIEW',
+          'ADMIN_APPROVED',
           'SUPPLIER_PREPARING_ORDER',
           'SHIPPED',
           'AWAITING_DELIVERY_CONFIRMATION',
@@ -116,7 +120,7 @@ export default function TraderOrdersPage() {
         ].includes(o.status),
       )
     if (tab === 'COMPLETED') return orders.filter((o) => ['DELIVERED', 'COMPLETED', 'ORDER_CLOSED'].includes(o.status))
-    return orders.filter((o) => ['CANCELLED', 'PAYMENT_REJECTED'].includes(o.status))
+    return orders.filter((o) => ['CANCELLED', 'PAYMENT_REJECTED', 'ADMIN_REJECTED'].includes(o.status))
   }, [orders, tab])
 
   const selected = filtered.find((o) => o.id === selectedId) ?? filtered[0] ?? null
@@ -135,11 +139,26 @@ export default function TraderOrdersPage() {
     }
   }, [selected])
 
+  const estimatedDeliveryDate = useMemo(() => {
+    if (!selected?.estimatedDelivery) return null
+    const date = new Date(selected.estimatedDelivery)
+    return Number.isFinite(date.getTime()) ? date : null
+  }, [selected])
+
+  const canConfirmDelivery = useMemo(() => {
+    if (!selected) return false
+    if (selected.status === 'AWAITING_DELIVERY_CONFIRMATION') return true
+    if (selected.status === 'SHIPPED' && estimatedDeliveryDate) {
+      return new Date() >= estimatedDeliveryDate
+    }
+    return false
+  }, [selected, estimatedDeliveryDate])
+
   useEffect(() => {
     if (!selected) return
     setProofForm((prev) => ({
       ...prev,
-      transferTo: selectedManualPayment?.transferTo || process.env.NEXT_PUBLIC_SYRIATEL_CASH_NUMBER || '0999999999',
+      transferTo: selectedManualPayment?.transferTo || SYRIATEL_CASH_NUMBER,
     }))
   }, [selected, selectedManualPayment])
 
@@ -172,6 +191,8 @@ export default function TraderOrdersPage() {
     PENDING_PLATFORM_FEE_PAYMENT: 10,
     WAITING_FOR_PAYMENT_VERIFICATION: 20,
     PLATFORM_FEE_CONFIRMED: 35,
+    WAITING_FOR_ADMIN_REVIEW: 40,
+    ADMIN_APPROVED: 45,
     SUPPLIER_PREPARING_ORDER: 55,
     PENDING: 10,
     CONFIRMED: 25,
@@ -183,6 +204,7 @@ export default function TraderOrdersPage() {
     COMPLETED: 100,
     CANCELLED: 100,
     PAYMENT_REJECTED: 100,
+    ADMIN_REJECTED: 100,
     DISPUTE_OPENED: 60,
   }
 
@@ -250,15 +272,30 @@ export default function TraderOrdersPage() {
                 {language === 'ar' ? 'رقم التتبع:' : 'Tracking number:'} {selected.trackingNumber ?? (language === 'ar' ? 'غير متوفر بعد' : 'Not available yet')}
               </div>
 
-              {selected.paymentStatus === 'PAID' && (
-                <div className="rounded-lg border border-emerald-300/70 bg-emerald-50/60 p-3 text-sm text-emerald-700 dark:bg-emerald-950/20 dark:text-emerald-300">
+                            {selected.paymentStatus === 'PAID' && selected.status === 'WAITING_FOR_ADMIN_REVIEW' && (
+                <div className="rounded-lg border border-amber-300/70 bg-amber-50/70 p-3 text-sm text-amber-700 dark:bg-amber-950/20 dark:text-amber-300">
                   {language === 'ar'
-                    ? 'تم دفع هذا الطلب واعتماده من الأدمن. لا تحتاج لإعادة الدفع. بانتظار متابعة الشحن من المورد.'
-                    : 'This order is already paid and approved by admin. No further payment is required. Waiting for supplier fulfillment.'}
+                    ? 'تم اعتماد الدفع وبانتظار مراجعة الإدارة للطلب قبل إرساله للمورد.'
+                    : 'Payment verified. Waiting for admin review before sending to supplier.'}
                 </div>
               )}
 
-              {selected.paymentStatus === 'FAILED' && (
+              {selected.paymentStatus === 'PAID' && selected.status !== 'WAITING_FOR_ADMIN_REVIEW' && selected.status !== 'ADMIN_REJECTED' && (
+                <div className="rounded-lg border border-emerald-300/70 bg-emerald-50/60 p-3 text-sm text-emerald-700 dark:bg-emerald-950/20 dark:text-emerald-300">
+                  {language === 'ar'
+                    ? 'تم اعتماد الطلب وإرساله للمورد. بانتظار تحديثات الشحن.'
+                    : 'Order approved and sent to supplier. Waiting for shipping updates.'}
+                </div>
+              )}
+
+                            {selected.status === 'ADMIN_REJECTED' && (
+                <div className="rounded-lg border border-red-300/70 bg-red-50/70 p-3 text-sm text-red-700 dark:bg-red-950/20 dark:text-red-300">
+                  {language === 'ar'
+                    ? 'تم رفض الطلب من الإدارة. يمكنك تعديل بيانات الشحن وإعادة الطلب.'
+                    : 'Order was rejected by admin. Please update shipping details and reorder.'}
+                </div>
+              )}
+{selected.paymentStatus === 'FAILED' && (
                 <div className="rounded-lg border border-red-300/70 bg-red-50/70 p-3 text-sm text-red-700 dark:bg-red-950/20 dark:text-red-300">
                   {language === 'ar'
                     ? 'تم رفض الدفع لهذا الطلب. يمكنك إعادة الإرسال بطلب جديد أو التواصل مع الدعم.'
@@ -266,18 +303,23 @@ export default function TraderOrdersPage() {
                 </div>
               )}
 
-              {selected.paymentStatus === 'PENDING' && (
+              {selected.paymentStatus !== 'PAID' && selected.status !== 'ADMIN_REJECTED' && (
                 <div className="rounded-lg border border-app p-3 space-y-2">
-                  <h3 className="font-semibold text-app">{language === 'ar' ? 'تأكيد الدفع اليدوي (سيرياتيل كاش)' : 'Manual payment confirmation (Syriatel Cash)'}</h3>
+                  <h3 className="font-semibold text-app">{language === 'ar' ? 'تأكيد عمولة المنصة (سيرياتيل كاش)' : 'Platform fee confirmation (Syriatel Cash)'}</h3>
                   <p className="text-xs text-muted">
                     {language === 'ar'
-                      ? 'حوّل المبلغ على الرقم التالي ثم ارفع صورة الوصل لإرساله إلى الأدمن للتحقق.'
-                      : 'Transfer to the number below, then submit receipt image for admin verification.'}
+                      ? 'حوّل عمولة المنصة إلى الرقم التالي ثم ارفع صورة الوصل للتحقق التلقائي.'
+                      : 'Transfer platform commission to the number below, then upload receipt for verification.'}
                   </p>
                   <div className="rounded-md border border-app bg-surface px-3 py-2 text-xs text-app">
                     {language === 'ar'
-                      ? `رقم التحويل (سيرياتيل كاش): ${proofForm.transferTo || '0999999999'}`
-                      : `Syriatel Cash transfer number: ${proofForm.transferTo || '0999999999'}`}
+                      ? `رقم سيرياتيل كاش: ${SYRIATEL_CASH_NUMBER}`
+                      : `Syriatel Cash: ${SYRIATEL_CASH_NUMBER}`}
+                  </div>
+                  <div className="text-xs text-muted">
+                    {language === 'ar'
+                      ? `للاستفسار أو الدعم: ${SUPPORT_EMAIL} - ${SUPPORT_PHONE}`
+                      : `For support: ${SUPPORT_EMAIL} - ${SUPPORT_PHONE}`}
                   </div>
                   <input
                     className="input-pro"
@@ -375,28 +417,38 @@ export default function TraderOrdersPage() {
                 </div>
               )}
 
-              {selected.status === 'AWAITING_DELIVERY_CONFIRMATION' && (
-                <button
-                  className="btn-primary !rounded-lg !px-3 !py-2 text-sm"
-                  onClick={async () => {
-                    if (!selected) return
-                    const response = await fetch(`/api/trader/orders/${selected.id}/confirm-delivery`, {
-                      method: 'POST',
-                      headers: { 'x-app-language': language },
-                    })
-                    const result = await response.json()
-                    if (!response.ok || !result.success) {
-                      alert(result.error || (language === 'ar' ? 'فشل تأكيد الاستلام' : 'Failed to confirm delivery'))
-                      return
-                    }
-                    window.location.reload()
-                  }}
-                >
-                  {language === 'ar' ? 'تأكيد الاستلام وإغلاق الطلب' : 'Confirm delivery & close order'}
-                </button>
+              {(selected.status === 'AWAITING_DELIVERY_CONFIRMATION' || (selected.status === 'SHIPPED' && estimatedDeliveryDate)) && (
+                <div className="space-y-2">
+                  {selected.status === 'SHIPPED' && estimatedDeliveryDate && !canConfirmDelivery && (
+                    <div className="rounded-lg border border-amber-300/70 bg-amber-50/70 p-3 text-sm text-amber-700 dark:bg-amber-950/20 dark:text-amber-300">
+                      {language === 'ar'
+                        ? `يمكنك تأكيد الاستلام بعد تاريخ ${estimatedDeliveryDate.toLocaleDateString()} ${estimatedDeliveryDate.toLocaleTimeString()}`
+                        : `You can confirm delivery after ${estimatedDeliveryDate.toLocaleDateString()} ${estimatedDeliveryDate.toLocaleTimeString()}`}
+                    </div>
+                  )}
+                  <button
+                    className="btn-primary !rounded-lg !px-3 !py-2 text-sm"
+                    disabled={!canConfirmDelivery}
+                    onClick={async () => {
+                      if (!selected) return
+                      const response = await fetch(`/api/trader/orders/${selected.id}/confirm-delivery`, {
+                        method: 'POST',
+                        headers: { 'x-app-language': language },
+                      })
+                      const result = await response.json()
+                      if (!response.ok || !result.success) {
+                        alert(result.error || (language === 'ar' ? 'فشل تأكيد الاستلام' : 'Failed to confirm delivery'))
+                        return
+                      }
+                      window.location.reload()
+                    }}
+                  >
+                    {language === 'ar' ? 'تأكيد الاستلام وإغلاق الطلب' : 'Confirm delivery & close order'}
+                  </button>
+                </div>
               )}
 
-              {['AWAITING_DELIVERY_CONFIRMATION', 'DELIVERED', 'ORDER_CLOSED'].includes(selected.status) && (
+              {['SHIPPED', 'AWAITING_DELIVERY_CONFIRMATION', 'DELIVERED', 'ORDER_CLOSED'].includes(selected.status) && (
                 <button
                   className="btn-secondary !rounded-lg !px-3 !py-2 text-sm"
                   onClick={async () => {

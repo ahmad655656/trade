@@ -17,7 +17,10 @@ const traderLinks = [
 ]
 
 export default async function TraderLayout({ children }: { children: React.ReactNode }) {
-  await requireRole([Role.TRADER])
+  const user = await requireRole([Role.TRADER])
+  if (user.status === 'PENDING_VERIFICATION') {
+    redirect('/trader/verify')
+  }
 
   return (
     <DashboardShell

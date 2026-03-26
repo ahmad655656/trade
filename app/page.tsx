@@ -138,9 +138,9 @@ export default function HomePage() {
 
   const dashboardHref = useMemo(() => {
     if (userRole === 'ADMIN') return '/dashboard/admin'
-    if (userRole === 'SUPPLIER') return '/dashboard/supplier'
-    if (userRole === 'TRADER') return '/dashboard/trader'
-    return '/dashboard/trader'
+    if (userRole === 'SUPPLIER') return '/supplier'
+    if (userRole === 'TRADER') return '/trader'
+    return '/trader'
   }, [userRole])
 
   return (

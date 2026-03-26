@@ -1,6 +1,6 @@
-import { NextResponse } from 'next/server'
+﻿import { NextResponse } from 'next/server'
 import { z } from 'zod'
-import { NotificationType, Role } from '@/lib/prisma-enums'
+import { NotificationType, Role, UserStatus } from '@/lib/prisma-enums'
 import { prisma } from '@/lib/prisma'
 import { getSessionUser } from '@/lib/session'
 import { assertSameOrigin } from '@/lib/security'
@@ -8,6 +8,7 @@ import { getRequestLanguage, i18nText } from '@/lib/request-language'
 import { sanitizePlainText } from '@/lib/sanitize'
 import { notifyUsers } from '@/lib/notifications'
 import { writeAuditLog } from '@/lib/audit'
+import { sendAccountApprovedEmail } from '@/lib/email'
 
 type Params = { params: Promise<{ id: string }> }
 
@@ -75,7 +76,7 @@ export async function PATCH(request: Request, { params }: Params) {
       where: { supplierId: id },
       include: {
         supplier: {
-          include: { user: { select: { id: true } } },
+          include: { user: { select: { id: true, name: true, email: true } } },
         },
       },
     })
@@ -101,6 +102,13 @@ export async function PATCH(request: Request, { params }: Params) {
         data: { verified: approved },
       })
 
+      if (approved) {
+        await tx.user.update({
+          where: { id: verification.supplier.user.id },
+          data: { status: UserStatus.ACTIVE },
+        })
+      }
+
       return nextVerification
     })
 
@@ -111,11 +119,15 @@ export async function PATCH(request: Request, { params }: Params) {
         ? i18nText(language, 'تم اعتماد توثيق المورد', 'Supplier verification approved')
         : i18nText(language, 'تم رفض توثيق المورد', 'Supplier verification rejected'),
       message: approved
-        ? i18nText(language, 'يمكنك الآن الظهور كمورد موثق.', 'You now appear as a verified supplier.')
+        ? i18nText(language, 'يمكنك الآن الظهور كمورد موثّق.', 'You now appear as a verified supplier.')
         : i18nText(language, `سبب الرفض: ${rejectionReason || '-'}`, `Rejection reason: ${rejectionReason || '-'}`),
       data: { supplierId: verification.supplierId, verificationId: verification.id },
       sendEmail: true,
     })
+
+    if (approved) {
+      await sendAccountApprovedEmail(verification.supplier.user.email, verification.supplier.user.name)
+    }
 
     await writeAuditLog({
       request,
@@ -142,4 +154,3 @@ export async function PATCH(request: Request, { params }: Params) {
     return NextResponse.json({ success: false, error: 'Failed to review supplier verification' }, { status: 500 })
   }
 }
-

@@ -10,10 +10,14 @@ type LifecycleStatus =
   | 'PENDING_PLATFORM_FEE_PAYMENT'
   | 'WAITING_FOR_PAYMENT_VERIFICATION'
   | 'PLATFORM_FEE_CONFIRMED'
+  | 'WAITING_FOR_ADMIN_REVIEW'
+  | 'ADMIN_APPROVED'
+  | 'ADMIN_REJECTED'
   | 'SUPPLIER_PREPARING_ORDER'
   | 'SHIPPED'
   | 'AWAITING_DELIVERY_CONFIRMATION'
   | 'DELIVERED'
+  | 'SUPPLIER_PAYMENT_CONFIRMED'
   | 'ORDER_CLOSED'
   | 'PAYMENT_REJECTED'
   | 'DISPUTE_OPENED'
@@ -32,6 +36,18 @@ const statusTitles: Record<LifecycleStatus, { ar: string; en: string }> = {
     ar: 'تم تأكيد عمولة المنصة',
     en: 'Platform fee confirmed',
   },
+  WAITING_FOR_ADMIN_REVIEW: {
+    ar: 'بانتظار مراجعة الإدارة',
+    en: 'Waiting for admin review',
+  },
+  ADMIN_APPROVED: {
+    ar: 'تم اعتماد الطلب من الإدارة',
+    en: 'Order approved by admin',
+  },
+  ADMIN_REJECTED: {
+    ar: 'تم رفض الطلب من الإدارة',
+    en: 'Order rejected by admin',
+  },
   SUPPLIER_PREPARING_ORDER: {
     ar: 'المورد يجهز الطلب',
     en: 'Supplier preparing order',
@@ -47,6 +63,10 @@ const statusTitles: Record<LifecycleStatus, { ar: string; en: string }> = {
   DELIVERED: {
     ar: 'تم التسليم',
     en: 'Delivered',
+  },
+  SUPPLIER_PAYMENT_CONFIRMED: {
+    ar: 'تم تأكيد استلام المال من التاجر',
+    en: 'Supplier confirmed cash payment received',
   },
   ORDER_CLOSED: {
     ar: 'أغلق الطلب',

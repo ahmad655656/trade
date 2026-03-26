@@ -10,8 +10,8 @@ const cairo = Cairo({ subsets: ['latin', 'arabic'], variable: '--font-arabic' })
 const manrope = Manrope({ subsets: ['latin'], variable: '--font-latin' })
 
 export const metadata: Metadata = {
-  title: 'B2B Marketplace',
-  description: 'Professional marketplace for admins, suppliers, and traders',
+  title: 'Premier B2B Trading Platform | Verified Suppliers Network',
+  description: 'Connect with certified suppliers, streamline orders, and grow your business with secure, efficient B2B trading solutions.',
 }
 
 export default function RootLayout({

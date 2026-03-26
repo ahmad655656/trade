@@ -80,9 +80,83 @@ export async function sendWelcomeEmail(email: string, name: string): Promise<boo
   }
 }
 
+export async function sendAccountApprovedEmail(email: string, name: string): Promise<boolean> {
+  try {
+    if (IS_DEV && !SEND_IN_DEV) {
+      console.log(`[DEV] Account approval email for ${email}`)
+      return true
+    }
+
+    const resendApiKey = process.env.RESEND_API_KEY?.trim()
+    const emailFrom = process.env.EMAIL_FROM?.trim()
+    if (!resendApiKey || !emailFrom) {
+      console.error('Email service not configured')
+      return false
+    }
+
+    const resend = await import('resend').then(m => m.Resend)
+    const resendClient = new resend(resendApiKey)
+
+    const isArabicEmail = email.endsWith('.sa') || email.endsWith('.ae') || email.includes('@hotmail.sa')
+    const lang = isArabicEmail ? 'ar' : 'en'
+
+    const subjects = {
+      ar: 'تم تفعيل حسابك بنجاح',
+      en: 'Your account has been activated',
+    }
+
+    const texts = {
+      ar: `مرحباً ${name}، تم تفعيل حسابك ويمكنك تسجيل الدخول والبدء باستخدام المنصة الآن. رابط الدخول: ${APP_URL}/login`,
+      en: `Hello ${name}, your account is now active. You can log in and start using the platform. Login: ${APP_URL}/login`,
+    }
+
+    const htmls = {
+      ar: `
+<!DOCTYPE html>
+<html dir="rtl">
+<head><meta charset="utf-8"></head>
+<body style="font-family: Arial; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <h2 style="color: #4F46E5;">تم تفعيل الحساب</h2>
+  <p>مرحباً <strong>${name}</strong>،</p>
+  <p>تم تفعيل حسابك ويمكنك الآن تسجيل الدخول والبدء باستخدام المنصة.</p>
+  <p style="text-align: center; margin: 30px 0;">
+    <a href="${APP_URL}/login" style="display: inline-block; padding: 14px 28px; background: #4F46E5; color: white; text-decoration: none; border-radius: 8px; font-weight: 600;">تسجيل الدخول</a>
+  </p>
+</body>
+</html>`,
+      en: `
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"></head>
+<body style="font-family: Arial; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <h2 style="color: #4F46E5;">Account Activated</h2>
+  <p>Hello <strong>${name}</strong>,</p>
+  <p>Your account is now active. You can log in and start using the platform.</p>
+  <p style="text-align: center; margin: 30px 0;">
+    <a href="${APP_URL}/login" style="display: inline-block; padding: 14px 28px; background: #4F46E5; color: white; text-decoration: none; border-radius: 8px; font-weight: 600;">Log in</a>
+  </p>
+</body>
+</html>`,
+    }
+
+    await resendClient.emails.send({
+      from: emailFrom,
+      to: email,
+      subject: subjects[lang as 'ar' | 'en'],
+      text: texts[lang as 'ar' | 'en'],
+      html: htmls[lang as 'ar' | 'en'],
+    })
+
+    console.log(`✅ Account approval email sent to ${email}`)
+    return true
+  } catch (error) {
+    console.error('Failed to send account approval email:', error)
+    return false
+  }
+}
+
 
 // Removed verification functions - accounts auto-active
 export function generateRandomToken(): string {
   return randomBytes(32).toString('hex')
 }
-

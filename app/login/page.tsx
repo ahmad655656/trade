@@ -13,10 +13,6 @@ const schema = (language: 'ar' | 'en') =>
   z.object({
     email: z.string().email(language === 'ar' ? 'أدخل بريدًا إلكترونيًا صحيحًا' : 'Enter a valid email'),
     password: z.string().min(1, language === 'ar' ? 'كلمة المرور مطلوبة' : 'Password is required'),
-    otp: z
-      .string()
-      .optional()
-      .refine((value) => !value || /^\d{6}$/.test(value), language === 'ar' ? 'رمز التحقق يجب أن يكون 6 أرقام' : 'OTP must be 6 digits'),
   })
 
 type FormValues = z.infer<ReturnType<typeof schema>>
@@ -54,8 +50,8 @@ export default function LoginPage() {
 
       const role = result.data.user.role
       if (role === 'ADMIN') router.push('/dashboard/admin')
-      else if (role === 'SUPPLIER') router.push('/dashboard/supplier')
-      else router.push('/dashboard/trader')
+      else if (role === 'SUPPLIER') router.push('/supplier')
+      else router.push('/trader')
 
       router.refresh()
     } catch (error) {
@@ -81,15 +77,6 @@ export default function LoginPage() {
           <label className="block text-sm font-medium text-app">{t('login.password')}</label>
           <input {...register('password')} type="password" className="input-pro mt-1" dir="ltr" />
           {errors.password && <p className="mt-1 text-sm text-red-500">{errors.password.message}</p>}
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-app">{language === 'ar' ? 'رمز التحقق الثنائي (اختياري)' : 'Two-factor code (optional)'}</label>
-          <input {...register('otp')} type="text" inputMode="numeric" maxLength={6} className="input-pro mt-1" dir="ltr" />
-          <p className="mt-1 text-xs text-muted">
-            {language === 'ar' ? 'أدخله فقط إذا كان الحساب مفعل عليه 2FA.' : 'Enter only if this account has 2FA enabled.'}
-          </p>
-          {errors.otp && <p className="mt-1 text-sm text-red-500">{errors.otp.message}</p>}
         </div>
 
         <button type="submit" disabled={isLoading} className="btn-primary w-full disabled:opacity-60">

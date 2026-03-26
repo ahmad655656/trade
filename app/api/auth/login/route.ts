@@ -15,7 +15,6 @@ import {
   registerSecurityEvent,
 } from '@/lib/security'
 import { setAuthCookies } from '@/lib/session-cookie'
-import { verifyTotpCode } from '@/lib/two-factor'
 import { notifyUsers } from '@/lib/notifications'
 import { isMissingColumnError, SCHEMA_OUT_OF_SYNC_MESSAGE } from '@/lib/prisma-errors'
 
@@ -100,7 +99,7 @@ export async function POST(request: Request) {
       )
     }
 
-    const { email, password, otp } = validationResult.data
+    const { email, password } = validationResult.data
     const normalizedEmail = email.toLowerCase().trim()
 
     if (await isLoginRateLimited(normalizedEmail, ipAddress)) {
@@ -147,38 +146,6 @@ export async function POST(request: Request) {
         success: false,
       })
       return NextResponse.json({ success: false, error: 'Your account is not active. Contact support.' }, { status: 403 })
-    }
-
-    if (user.twoFactorAuth) {
-      const secret = user.twoFactorSecret
-      if (!secret) {
-        await registerSecurityEvent({
-          userId: user.id,
-          type: 'FAILED_2FA',
-          description: '2FA enabled without secret',
-          ipAddress,
-          userAgent,
-        })
-        return NextResponse.json({ success: false, error: '2FA setup invalid. Contact support.' }, { status: 403 })
-      }
-
-      if (!otp || !verifyTotpCode(secret, otp)) {
-        await registerLoginAttempt({
-          userId: user.id,
-          email: normalizedEmail,
-          ipAddress,
-          userAgent,
-          success: false,
-        })
-        await registerSecurityEvent({
-          userId: user.id,
-          type: 'FAILED_2FA',
-          description: '2FA verification failed',
-          ipAddress,
-          userAgent,
-        })
-        return NextResponse.json({ success: false, error: 'Two-factor code is required or invalid', requiresTwoFactor: true }, { status: 401 })
-      }
     }
 
     const suspicious = await detectSuspiciousLogin(user.id, ipAddress, userAgent)

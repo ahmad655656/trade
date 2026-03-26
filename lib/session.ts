@@ -97,6 +97,6 @@ export async function requireRole(roles: Role[]) {
 
 export function getRoleDashboardPath(role: Role) {
   if (role === Role.ADMIN) return '/dashboard/admin'
-  if (role === Role.SUPPLIER) return '/dashboard/supplier'
-  return '/dashboard/trader'
+  if (role === Role.SUPPLIER) return '/supplier'
+  return '/trader'
 }

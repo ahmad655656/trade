@@ -80,7 +80,7 @@ model Trader {
   id           String       @id @default(cuid())
   userId       String       @unique
   user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  companyName  String?
+  companyName  String
   businessType BusinessType?
   taxNumber    String?
   totalOrders  Int          @default(0)
@@ -92,6 +92,20 @@ model Trader {
   rfqs     Rfq[]
   favoriteLists FavoriteList[]
   disputes Dispute[]
+  verification TraderVerification?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model TraderVerification {
+  id        String                     @id @default(cuid())
+  traderId  String                     @unique
+  trader    Trader                     @relation(fields: [traderId], references: [id], onDelete: Cascade)
+  status    SupplierVerificationStatus @default(PENDING)
+  reviewedById    String?
+  reviewedAt      DateTime?
+  rejectionReason String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -233,7 +247,9 @@ model Order {
   disputeOpenedAt   DateTime?
   cancelledAt       DateTime?
   cancelledReason   String?
+  supplierPaymentConfirmedAt DateTime?
 
+  invoice Invoice?
   reviews Review[]
   timelineEvents OrderTimelineEvent[]
   disputes Dispute[]
@@ -396,7 +412,7 @@ model WishlistItem {
 
 model Review {
   id           String    @id @default(cuid())
-  orderId       String?
+  orderId       String?  @unique
   order         Order?   @relation(fields: [orderId], references: [id])
   fromUserId    String
   fromUser      User     @relation("Reviewer", fields: [fromUserId], references: [id])
@@ -419,6 +435,28 @@ model Review {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model Invoice {
+  id            String        @id @default(cuid())
+  orderId       String        @unique
+  order         Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  invoiceNumber String        @unique
+  status        InvoiceStatus @default(ISSUED)
+  currency      String        @default("SYP")
+  subtotal      Float
+  tax           Float         @default(0)
+  shipping      Float         @default(0)
+  discount      Float         @default(0)
+  total         Float
+  issuedAt      DateTime      @default(now())
+  pdfUrl        String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([orderId])
+  @@index([invoiceNumber])
 }
 
 model SupplierVerification {
@@ -726,10 +764,10 @@ enum Role {
 }
 
 enum UserStatus {
+  PENDING_VERIFICATION
   ACTIVE
   SUSPENDED
   BANNED
-  PENDING_VERIFICATION
 }
 
 enum BusinessType {
@@ -753,16 +791,20 @@ enum OrderStatus {
   PENDING_PLATFORM_FEE_PAYMENT
   WAITING_FOR_PAYMENT_VERIFICATION
   PLATFORM_FEE_CONFIRMED
+  WAITING_FOR_ADMIN_REVIEW
+  ADMIN_APPROVED
+  ADMIN_REJECTED
   SUPPLIER_PREPARING_ORDER
+  SHIPPED
   AWAITING_DELIVERY_CONFIRMATION
+  DELIVERED
+  SUPPLIER_PAYMENT_CONFIRMED
   ORDER_CLOSED
   PAYMENT_REJECTED
   DISPUTE_OPENED
   PENDING
   CONFIRMED
   PROCESSING
-  SHIPPED
-  DELIVERED
   CANCELLED
   REFUNDED
   COMPLETED
@@ -779,10 +821,18 @@ enum OrderItemStatus {
 
 enum PaymentStatus {
   PENDING
-  PAID
+  SUBMITTED
+  REVIEW
+  APPROVED
   FAILED
   REFUNDED
   PARTIALLY_REFUNDED
+}
+
+enum InvoiceStatus {
+  ISSUED
+  PAID
+  VOID
 }
 
 enum PaymentMethod {

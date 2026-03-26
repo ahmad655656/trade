@@ -1,6 +1,7 @@
-﻿'use client'
+'use client'
 
 import { useEffect, useMemo, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import toast from 'react-hot-toast'
 import { useUi } from '@/components/providers/UiProvider'
 import { formatSypAmount } from '@/lib/currency'
@@ -27,48 +28,11 @@ type Cart = {
 
 export default function TraderCartPage() {
   const { language } = useUi()
+  const router = useRouter()
   const [cart, setCart] = useState<Cart | null>(null)
   const [loading, setLoading] = useState(true)
   const [updatingId, setUpdatingId] = useState<string | null>(null)
   const [checkingOut, setCheckingOut] = useState(false)
-  const [showPaymentForm, setShowPaymentForm] = useState(false)
-  const [uploadingReceipt, setUploadingReceipt] = useState(false)
-  const [manualPayment, setManualPayment] = useState({
-    senderPhone: '',
-    transferTo: process.env.NEXT_PUBLIC_SYRIATEL_CASH_NUMBER || '0999999999',
-    receiptUrl: '',
-    notes: '',
-  })
-
-  const uploadReceipt = async (file: File) => {
-    setUploadingReceipt(true)
-    try {
-      if (!file.type.startsWith('image/')) {
-        throw new Error(language === 'ar' ? 'يجب اختيار ملف صورة فقط' : 'Please select an image file only')
-      }
-      if (file.size > 5 * 1024 * 1024) {
-        throw new Error(language === 'ar' ? 'حجم الصورة يجب أن يكون 5MB أو أقل' : 'Image must be 5MB or less')
-      }
-
-      const formData = new FormData()
-      formData.append('file', file)
-
-      const response = await fetch('/api/uploads/receipt', {
-        method: 'POST',
-        headers: { 'x-app-language': language },
-        body: formData,
-      })
-      const result = await response.json()
-      if (!response.ok || !result.success) throw new Error(result.error ?? 'Upload failed')
-
-      setManualPayment((prev) => ({ ...prev, receiptUrl: result.data.url }))
-      toast.success(language === 'ar' ? 'تم رفع صورة الوصل' : 'Receipt uploaded')
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : language === 'ar' ? 'فشل رفع الوصل' : 'Failed to upload receipt')
-    } finally {
-      setUploadingReceipt(false)
-    }
-  }
 
   const loadCart = async () => {
     setLoading(true)
@@ -147,18 +111,17 @@ export default function TraderCartPage() {
           'Content-Type': 'application/json',
           'x-app-language': language,
         },
-        body: JSON.stringify(manualPayment),
+        body: JSON.stringify({}),
       })
       const result = await response.json()
       if (!response.ok || !result.success) throw new Error(result.error ?? 'Checkout failed')
       toast.success(
         language === 'ar'
-          ? 'تم إرسال الطلب وبيانات التحويل للأدمن. بانتظار الاعتماد اليدوي.'
-          : 'Order and transfer proof submitted to admin. Waiting manual approval.',
+          ? 'تم إنشاء الطلب. اذهب إلى صفحة الطلبات لإرفاق صورة الوصل وإرسال بيانات التحويل.'
+          : 'Order created. Go to Orders page to attach receipt and submit transfer details.',
       )
       await loadCart()
-      setShowPaymentForm(false)
-      setManualPayment((prev) => ({ ...prev, senderPhone: '', receiptUrl: '', notes: '' }))
+      router.push('/trader/orders')
     } catch (error) {
       toast.error(error instanceof Error ? error.message : language === 'ar' ? 'فشل إتمام الطلب' : 'Checkout failed')
     } finally {
@@ -215,103 +178,25 @@ export default function TraderCartPage() {
           <div className="mt-2 border-t border-app pt-2 flex justify-between font-semibold"><span className="text-app">{language === 'ar' ? 'الإجمالي' : 'Total'}</span><span className="text-app">{formatSypAmount(summary.total, language)}</span></div>
         </div>
 
-        <p className="mt-3 text-xs text-muted">{language === 'ar' ? 'يتم دفع عمولة المنصة فقط عبر سيرياتيل كاش ثم تعتمد يدويًا من الأدمن.' : 'Only platform fee is paid manually (Syriatel Cash) and then verified by admin.'}</p>
+        <p className="mt-3 text-xs text-muted">
+          {language === 'ar'
+            ? 'بعد وضع الطلب، يجب رفع وصل الدفع وإرسال تفاصيل التحويل من صفحة الطلبات.'
+            : 'After placing the order, you must upload the receipt and submit transfer details from the Orders page.'}
+        </p>
 
-        {!showPaymentForm ? (
-          <button
-            className="mt-4 btn-primary w-full !rounded-lg !px-3 !py-2 text-sm disabled:opacity-60"
-            disabled={!cart || !cart.items.length}
-            onClick={() => setShowPaymentForm(true)}
-          >
-            {language === 'ar' ? 'دفع عمولة المنصة وإرسال الوصل' : 'Pay platform fee & submit receipt'}
-          </button>
-        ) : (
-          <div className="mt-4 space-y-2 rounded-lg border border-app p-3">
-            <p className="text-xs font-semibold text-app">
-              {language === 'ar' ? 'املأ بيانات تحويل عمولة المنصة:' : 'Fill platform-fee transfer details:'}
-            </p>
-            <p className="text-xs text-muted">
-              {language === 'ar'
-                ? `حوّل إلى رقم سيرياتيل كاش: ${manualPayment.transferTo}`
-                : `Transfer to Syriatel Cash number: ${manualPayment.transferTo}`}
-            </p>
-            <input
-              className="input-pro"
-              placeholder={language === 'ar' ? 'رقم المرسل من حسابك' : 'Sender phone number'}
-              value={manualPayment.senderPhone}
-              onChange={(e) => setManualPayment((prev) => ({ ...prev, senderPhone: e.target.value }))}
-            />
-            <p className="text-xs text-muted">
-              {language === 'ar' ? 'اكتب رقم هاتفك الذي أرسلت منه التحويل.' : 'Enter your phone number used to send the transfer.'}
-            </p>
-            <input
-              className="input-pro"
-              placeholder={language === 'ar' ? 'رقم التحويل إليه' : 'Transfer-to number'}
-              value={manualPayment.transferTo}
-              onChange={(e) => setManualPayment((prev) => ({ ...prev, transferTo: e.target.value }))}
-            />
-            <p className="text-xs text-muted">
-              {language === 'ar' ? 'هذا الرقم يستقبل الحوالة، تأكد أنه صحيح قبل الإرسال.' : 'This is the receiving number, verify it before submission.'}
-            </p>
-            <input
-              type="file"
-              accept="image/*"
-              className="input-pro"
-              disabled={uploadingReceipt}
-              onChange={async (e) => {
-                const input = e.currentTarget
-                const file = e.target.files?.[0]
-                if (!file) return
-                await uploadReceipt(file)
-                input.value = ''
-              }}
-            />
-            {manualPayment.receiptUrl ? (
-              <a
-                href={manualPayment.receiptUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="text-xs text-[var(--app-primary)] underline"
-              >
-                {language === 'ar' ? 'تم رفع الوصل - عرض الصورة' : 'Receipt uploaded - View image'}
-              </a>
-            ) : (
-              <p className="text-xs text-muted">
-                {uploadingReceipt
-                  ? language === 'ar'
-                    ? 'جارٍ رفع صورة الوصل...'
-                    : 'Uploading receipt image...'
-                  : language === 'ar'
-                    ? 'ارفع لقطة شاشة الوصل من جهازك'
-                    : 'Upload receipt screenshot from your device'}
-              </p>
-            )}
-            <textarea
-              className="input-pro min-h-20"
-              placeholder={language === 'ar' ? 'ملاحظات إضافية (اختياري)' : 'Additional notes (optional)'}
-              value={manualPayment.notes}
-              onChange={(e) => setManualPayment((prev) => ({ ...prev, notes: e.target.value }))}
-            />
-            <p className="text-xs text-muted">
-              {language === 'ar' ? 'يمكنك كتابة اسم صاحب التحويل أو وقت الإرسال لتسريع الاعتماد.' : 'You can add sender name or transfer time to speed verification.'}
-            </p>
-            <div className="flex gap-2">
-              <button
-                className="btn-primary w-full !rounded-lg !px-3 !py-2 text-sm disabled:opacity-60"
-                disabled={checkingOut || uploadingReceipt || !manualPayment.receiptUrl || !cart || !cart.items.length}
-                onClick={checkout}
-              >
-                    {checkingOut ? (language === 'ar' ? 'جارٍ إرسال الطلب...' : 'Submitting order...') : language === 'ar' ? 'إرسال عمولة المنصة للأدمن' : 'Submit platform fee proof to admin'}
-              </button>
-              <button
-                className="btn-secondary !rounded-lg !px-3 !py-2 text-sm"
-                onClick={() => setShowPaymentForm(false)}
-              >
-                {language === 'ar' ? 'إلغاء' : 'Cancel'}
-              </button>
-            </div>
-          </div>
-        )}
+        <button
+          className="mt-4 btn-primary w-full !rounded-lg !px-3 !py-2 text-sm disabled:opacity-60"
+          disabled={!cart || !cart.items.length || checkingOut}
+          onClick={checkout}
+        >
+          {checkingOut
+            ? language === 'ar'
+              ? 'جارٍ إرسال الطلب...'
+              : 'Submitting order...'
+            : language === 'ar'
+              ? 'طلب الآن' 
+              : 'Place order'}
+        </button>
       </aside>
     </div>
   )

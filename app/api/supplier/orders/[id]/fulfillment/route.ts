@@ -56,6 +56,7 @@ export async function PATCH(request: Request, { params }: Params) {
       order.paymentStatus !== 'PAID' ||
       ![
         'PLATFORM_FEE_CONFIRMED',
+        'ADMIN_APPROVED',
         'SUPPLIER_PREPARING_ORDER',
         'SHIPPED',
         'AWAITING_DELIVERY_CONFIRMATION',

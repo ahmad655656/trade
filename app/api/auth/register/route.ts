@@ -1,13 +1,14 @@
 import { NextResponse } from 'next/server'
-import { Role, UserStatus } from '@/lib/prisma-enums'
+import { NotificationType, Role, UserStatus } from '@/lib/prisma-enums'
 import { prisma } from '@/lib/prisma'
-import { generateToken, hashPassword } from '@/lib/auth'
+import { hashPassword } from '@/lib/auth'
 import { registerSchema } from '@/lib/validation'
 import { sanitizePlainText } from '@/lib/sanitize'
 import { assertSameOrigin, getClientIp, getUserAgent, registerSecurityEvent } from '@/lib/security'
 import { detectDuplicateAccountSignals } from '@/lib/fraud'
 import { writeAuditLog } from '@/lib/audit'
-import { setAuthCookies } from '@/lib/session-cookie'
+import { notifyAdmins } from '@/lib/notifications'
+import { getRequestLanguage, i18nText } from '@/lib/request-language'
 
 
 type TxClient = Omit<typeof prisma, '$connect' | '$disconnect' | '$on' | '$transaction' | '$extends' | '$use'>
@@ -18,6 +19,8 @@ export async function POST(request: Request) {
     if (sameOriginError) {
       return NextResponse.json({ success: false, error: sameOriginError }, { status: 403 })
     }
+
+    const language = getRequestLanguage(request)
 
     const body = await request.json()
     const validationResult = registerSchema.safeParse(body)
@@ -32,9 +35,9 @@ export async function POST(request: Request) {
       )
     }
 
-    const { email, password, name, role, phone, companyName } = validationResult.data
+    const { email, password, name, role, phone, companyName, commercialRegister, taxNumber } = validationResult.data
     const normalizedEmail = email.toLowerCase().trim()
-    const normalizedPhone = phone?.trim() || null
+    const normalizedPhone = phone.trim()
     const ipAddress = getClientIp(request)
     const userAgent = getUserAgent(request)
 
@@ -54,69 +57,65 @@ export async function POST(request: Request) {
 
     const hashedPassword = await hashPassword(password)
     const sanitizedName = sanitizePlainText(name, 80)
-    const sanitizedCompanyName = sanitizePlainText(companyName, 120)
+      const sanitizedCommercialRegister = sanitizePlainText(commercialRegister, 50)
+      const sanitizedTaxNumber = sanitizePlainText(taxNumber, 30)
+      const sanitizedCompanyName = sanitizePlainText(companyName, 120)
 
-    const user = await prisma.$transaction(async (tx: TxClient) => {
-      const createdUser = await tx.user.create({
-        data: {
-          email: normalizedEmail,
-          password: hashedPassword,
-          name: sanitizedName,
-          role,
-          phone: normalizedPhone,
-          status: UserStatus.ACTIVE,
-        },
-      })
-
-      if (role === Role.SUPPLIER) {
-        const supplier = await tx.supplier.create({
+      const user = await prisma.$transaction(async (tx: TxClient) => {
+        const createdUser = await tx.user.create({
           data: {
-            userId: createdUser.id,
-            companyName: sanitizedCompanyName || `${sanitizedName} Store`,
+            email: normalizedEmail,
+            password: hashedPassword,
+            name: sanitizedName,
+            role,
+            phone: normalizedPhone,
+            status: UserStatus.PENDING_VERIFICATION,
           },
         })
 
-        await tx.supplierVerification.create({
-          data: {
-            supplierId: supplier.id,
-            status: 'PENDING',
-          },
-        })
-      }
+        if (role === Role.SUPPLIER) {
+          const supplier = await tx.supplier.create({
+            data: {
+              userId: createdUser.id,
+              companyName: sanitizedCompanyName,
+              commercialRegister: sanitizedCommercialRegister,
+              taxNumber: sanitizedTaxNumber,
+            },
+          })
 
-      if (role === Role.TRADER) {
-        const trader = await tx.trader.create({
-          data: {
-            userId: createdUser.id,
-            companyName: sanitizedCompanyName || null,
-          },
-        })
+          await tx.supplierVerification.create({
+            data: {
+              supplierId: supplier.id,
+              status: 'PENDING',
+            },
+          })
+        }
 
-        await Promise.all([
-          tx.cart.create({ data: { traderId: trader.id } }),
-          tx.favoriteList.create({
+        if (role === Role.TRADER) {
+          const trader = await tx.trader.create({
+            data: {
+              userId: createdUser.id,
+              companyName: sanitizedCompanyName,
+              taxNumber: sanitizedTaxNumber,
+            },
+          })
+
+          await tx.traderVerification.create({
             data: {
               traderId: trader.id,
-              name: 'Preferred Suppliers',
+              status: 'PENDING',
             },
-          }),
-          tx.favoriteList.create({
-            data: {
-              traderId: trader.id,
-              name: 'Potential Products',
-            },
-          }),
-        ])
-      }
+          })
+        }
 
-      await tx.wallet.create({
-        data: {
-          userId: createdUser.id,
-        },
+        await tx.wallet.create({
+          data: {
+            userId: createdUser.id,
+          },
+        })
+
+        return createdUser
       })
-
-      return createdUser
-    })
 
     if (duplicateSignals.suspicious) {
       await registerSecurityEvent({
@@ -133,6 +132,30 @@ export async function POST(request: Request) {
       })
     }
 
+    const roleLabel = user.role === Role.SUPPLIER
+      ? i18nText(language, 'مورد', 'Supplier')
+      : i18nText(language, 'تاجر', 'Trader')
+
+    await notifyAdmins({
+      type: NotificationType.SYSTEM,
+      title: i18nText(language, 'طلب تسجيل جديد بانتظار المراجعة', 'New registration pending approval'),
+      message: i18nText(
+        language,
+        'تم إنشاء حساب جديد ويتطلب موافقة الإدارة.',
+        'A new account was created and requires admin approval.',
+      ),
+      data: {
+        kind: 'REGISTRATION_PENDING',
+        userId: user.id,
+        role: user.role,
+        roleLabel,
+        name: user.name,
+        email: user.email,
+        phone: normalizedPhone,
+        companyName: sanitizedCompanyName,
+      },
+    })
+
     await writeAuditLog({
       request,
       actorUserId: user.id,
@@ -145,13 +168,9 @@ export async function POST(request: Request) {
       },
     })
 
-    // Auto-login immediately (no verification needed)
-    const token = generateToken(user.id, user.role)
-    await setAuthCookies(token)
-
     return NextResponse.json({
       success: true,
-      message: 'Account created and logged in successfully!',
+      message: 'Registration submitted. Awaiting admin approval.',
       data: {
         user: {
           id: user.id,

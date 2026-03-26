@@ -20,7 +20,10 @@ CREATE TYPE "OrderStatus" AS ENUM ('PENDING', 'CONFIRMED', 'PROCESSING', 'SHIPPE
 CREATE TYPE "OrderItemStatus" AS ENUM ('PENDING', 'PROCESSING', 'SHIPPED', 'DELIVERED', 'CANCELLED', 'REFUNDED');
 
 -- CreateEnum
-CREATE TYPE "PaymentStatus" AS ENUM ('PENDING', 'PAID', 'FAILED', 'REFUNDED', 'PARTIALLY_REFUNDED');
+CREATE TYPE "PaymentStatus" AS ENUM ('PENDING', 'SUBMITTED', 'REVIEW', 'APPROVED', 'FAILED', 'REFUNDED', 'PARTIALLY_REFUNDED');
+
+-- CreateEnum
+CREATE TYPE "InvoiceStatus" AS ENUM ('ISSUED', 'PAID', 'VOID');
 
 -- CreateEnum
 CREATE TYPE "PaymentMethod" AS ENUM ('CASH', 'CARD', 'BANK_TRANSFER', 'WALLET', 'INSTALLMENT');
@@ -271,6 +274,26 @@ CREATE TABLE "Payment" (
 );
 
 -- CreateTable
+CREATE TABLE "Invoice" (
+    "id" TEXT NOT NULL,
+    "orderId" TEXT NOT NULL,
+    "invoiceNumber" TEXT NOT NULL,
+    "status" "InvoiceStatus" NOT NULL DEFAULT 'ISSUED',
+    "currency" TEXT NOT NULL DEFAULT 'SYP',
+    "subtotal" DOUBLE PRECISION NOT NULL,
+    "tax" DOUBLE PRECISION NOT NULL DEFAULT 0,
+    "shipping" DOUBLE PRECISION NOT NULL DEFAULT 0,
+    "discount" DOUBLE PRECISION NOT NULL DEFAULT 0,
+    "total" DOUBLE PRECISION NOT NULL,
+    "issuedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "pdfUrl" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "Invoice_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "Wallet" (
     "id" TEXT NOT NULL,
     "userId" TEXT NOT NULL,
@@ -508,6 +531,12 @@ CREATE UNIQUE INDEX "Order_orderNumber_key" ON "Order"("orderNumber");
 CREATE UNIQUE INDEX "Payment_orderId_key" ON "Payment"("orderId");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "Invoice_orderId_key" ON "Invoice"("orderId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "Invoice_invoiceNumber_key" ON "Invoice"("invoiceNumber");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "Wallet_userId_key" ON "Wallet"("userId");
 
 -- CreateIndex
@@ -515,6 +544,9 @@ CREATE UNIQUE INDEX "Cart_traderId_key" ON "Cart"("traderId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "WishlistItem_traderId_productId_key" ON "WishlistItem"("traderId", "productId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "Review_orderId_key" ON "Review"("orderId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "ConversationParticipant_conversationId_userId_key" ON "ConversationParticipant"("conversationId", "userId");

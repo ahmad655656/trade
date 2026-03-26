@@ -15,19 +15,25 @@ export const registerSchema = z
     password: strongPassword,
     confirmPassword: z.string(),
     name: z.string().trim().min(2, 'Name must be at least 2 characters').max(80),
+    phone: z.string().trim().min(10, 'Phone required').max(20),
+    companyName: z.string().trim().min(2, 'Company name required for verification').max(120),
+    commercialRegister: z.string().trim().min(5, 'Commercial register required').max(50),
+    taxNumber: z.string().trim().min(5, 'Tax ID required').max(30),
     role: z.enum(['SUPPLIER', 'TRADER']),
-    phone: z.string().trim().max(30).optional(),
-    companyName: z.string().trim().max(120).optional(),
+    termsAccepted: z.boolean(),
   })
   .refine((data) => data.password === data.confirmPassword, {
     path: ['confirmPassword'],
     message: 'Password confirmation does not match',
   })
+  .refine((data) => data.termsAccepted === true, {
+    path: ['termsAccepted'],
+    message: 'Terms must be accepted',
+  })
 
 export const loginSchema = z.object({
   email: z.string().trim().email('Please provide a valid email address'),
   password: z.string().min(1, 'Password is required'),
-  otp: z.string().trim().regex(/^\d{6}$/, 'OTP must be 6 digits').optional(),
 })
 
 export const productCreateSchema = z.object({

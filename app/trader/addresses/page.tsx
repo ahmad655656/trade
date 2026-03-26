@@ -241,21 +241,21 @@ export default function TraderAddressesPage() {
               <option value="WORK">{typeLabel.WORK}</option>
               <option value="OTHER">{typeLabel.OTHER}</option>
             </select>
-            <input className="input-pro" required placeholder={language === 'ar' ? 'عنوان التسمية (منزل، مكتب...)' : 'Address title (Home, Office...)'} value={form.title} onChange={(e) => setForm((prev) => ({ ...prev, title: e.target.value }))} />
-            <input className="input-pro" required placeholder={language === 'ar' ? 'اسم المستلم' : 'Recipient name'} value={form.recipient} onChange={(e) => setForm((prev) => ({ ...prev, recipient: e.target.value }))} />
+            <input className="input-pro" required placeholder={language === 'ar' ? 'اسم الموقع التجاري (المستودع الرئيسي، المكتب...)' : 'Business Location Name (Main Warehouse, Office...)'} value={form.title} onChange={(e) => setForm((prev) => ({ ...prev, title: e.target.value }))} />
+            <input className="input-pro" required placeholder={language === 'ar' ? 'اسم المستلم التجاري' : 'Business Recipient Name'} value={form.recipient} onChange={(e) => setForm((prev) => ({ ...prev, recipient: e.target.value }))} />
             <input className="input-pro" required placeholder={language === 'ar' ? 'رقم الهاتف' : 'Phone number'} value={form.phone} onChange={(e) => setForm((prev) => ({ ...prev, phone: e.target.value }))} />
             <input className="input-pro" required placeholder={language === 'ar' ? 'الدولة' : 'Country'} value={form.country} onChange={(e) => setForm((prev) => ({ ...prev, country: e.target.value }))} />
             <input className="input-pro" required placeholder={language === 'ar' ? 'المدينة' : 'City'} value={form.city} onChange={(e) => setForm((prev) => ({ ...prev, city: e.target.value }))} />
             <input className="input-pro" placeholder={language === 'ar' ? 'المنطقة/الحي (اختياري)' : 'State/Area (optional)'} value={form.state} onChange={(e) => setForm((prev) => ({ ...prev, state: e.target.value }))} />
-            <textarea className="input-pro min-h-20" required placeholder={language === 'ar' ? 'العنوان التفصيلي (شارع، مبنى، طابق...)' : 'Detailed address (street, building, floor...)'} value={form.address} onChange={(e) => setForm((prev) => ({ ...prev, address: e.target.value }))} />
+            <textarea className="input-pro min-h-20" required placeholder={language === 'ar' ? 'العنوان التجاري الكامل (الشارع، المبنى، الطابق، المستودع...)' : 'Full Business Address (street, building, floor, warehouse...)'} value={form.address} onChange={(e) => setForm((prev) => ({ ...prev, address: e.target.value }))} />
             <input className="input-pro" placeholder={language === 'ar' ? 'الرمز البريدي (اختياري)' : 'Postal code (optional)'} value={form.postalCode} onChange={(e) => setForm((prev) => ({ ...prev, postalCode: e.target.value }))} />
             <div className="grid grid-cols-2 gap-2">
               <input className="input-pro" type="number" step="any" placeholder={language === 'ar' ? 'خط العرض (اختياري)' : 'Latitude (optional)'} value={form.latitude} onChange={(e) => setForm((prev) => ({ ...prev, latitude: e.target.value }))} />
               <input className="input-pro" type="number" step="any" placeholder={language === 'ar' ? 'خط الطول (اختياري)' : 'Longitude (optional)'} value={form.longitude} onChange={(e) => setForm((prev) => ({ ...prev, longitude: e.target.value }))} />
             </div>
-            <label className="flex items-center gap-2 text-sm text-muted">
+              <label className="flex items-center gap-2 text-sm text-muted">
               <input type="checkbox" checked={form.isDefault} onChange={(e) => setForm((prev) => ({ ...prev, isDefault: e.target.checked }))} />
-              {language === 'ar' ? 'تعيين كعنوان افتراضي' : 'Set as default address'}
+              {language === 'ar' ? 'تعيين كعنوان شحن افتراضي' : 'Set as Default Shipping Address'}
             </label>
 
             <div className="flex flex-wrap gap-2 pt-2">

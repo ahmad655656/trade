@@ -1,4 +1,4 @@
-import { ProductStatus } from '@/lib/prisma-enums'
+﻿import { NotificationType, ProductStatus } from '@/lib/prisma-enums'
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getSessionUser } from '@/lib/session'
@@ -6,6 +6,8 @@ import { productCreateSchema } from '@/lib/validation'
 import { similarity } from '@/lib/search'
 import { assertSameOrigin } from '@/lib/security'
 import { writeAuditLog } from '@/lib/audit'
+import { getRequestLanguage, i18nText } from '@/lib/request-language'
+import { notifyAdmins } from '@/lib/notifications'
 
 type ProductFindManyArgs = NonNullable<Parameters<typeof prisma.product.findMany>[0]>
 
@@ -239,6 +241,27 @@ export async function POST(request: Request) {
         },
       })
 
+      try {
+        const language = getRequestLanguage(request)
+        await notifyAdmins({
+          type: NotificationType.SYSTEM,
+          title: i18nText(language, 'تم إنشاء منتج جديد', 'New product created'),
+          message: i18nText(
+            language,
+            `أنشأ المورد ${user.name} المنتج ${created.name} (رقم: ${created.id}).`,
+            `Supplier ${user.name} created product ${created.name} (id: ${created.id}).`,
+          ),
+          data: {
+            productId: created.id,
+            productName: created.name,
+            supplierId: user.supplier.id,
+            supplierName: user.name,
+          },
+        })
+      } catch (error) {
+        console.error('Failed to notify admins about product creation:', error)
+      }
+
       return NextResponse.json({ success: true, data: created }, { status: 201 })
     } else {
       // JSON payload (existing)
@@ -298,5 +321,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: false, error: 'Failed to create product' }, { status: 500 })
   }
 }
+
+
 
 

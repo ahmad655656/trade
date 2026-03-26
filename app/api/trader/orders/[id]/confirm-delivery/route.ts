@@ -12,6 +12,11 @@ type Params = { params: Promise<{ id: string }> }
 type TxClient = Omit<typeof prisma, '$connect' | '$disconnect' | '$on' | '$transaction' | '$extends' | '$use'>
 type SupplierItem = { supplier: { user: { id: string } } }
 
+type OrderItemSummary = {
+  quantity: number
+  product: { nameAr: string | null; nameEn: string | null }
+}
+
 export async function POST(request: Request, { params }: Params) {
   try {
     const sameOriginError = assertSameOrigin(request)
@@ -22,28 +27,37 @@ export async function POST(request: Request, { params }: Params) {
     const language = getRequestLanguage(request)
     const user = await getSessionUser()
     if (!user || user.role !== Role.TRADER || !user.trader) {
-      return NextResponse.json({ success: false, error: i18nText(language, 'غير مصرح', 'Unauthorized') }, { status: 401 })
+      return NextResponse.json({ success: false, error: i18nText(language, 'ط·ط›ط¸ظ¹ط·آ± ط¸â€¦ط·آµط·آ±ط·آ­', 'Unauthorized') }, { status: 401 })
     }
 
     const { id } = await params
     const order = await prisma.order.findUnique({
       where: { id },
       include: {
+        trader: { include: { user: { select: { id: true, name: true, email: true } } } },
+        address: true,
         items: {
           include: {
             supplier: { include: { user: { select: { id: true } } } },
+            product: { select: { nameAr: true, nameEn: true } },
           },
         },
       },
     })
 
     if (!order || order.traderId !== user.trader.id) {
-      return NextResponse.json({ success: false, error: i18nText(language, 'الطلب غير موجود', 'Order not found') }, { status: 404 })
+      return NextResponse.json({ success: false, error: i18nText(language, 'ط·آ§ط¸â€‍ط·آ·ط¸â€‍ط·آ¨ ط·ط›ط¸ظ¹ط·آ± ط¸â€¦ط¸ث†ط·آ¬ط¸ث†ط·آ¯', 'Order not found') }, { status: 404 })
     }
 
-    if (!['AWAITING_DELIVERY_CONFIRMATION', 'DELIVERED'].includes(order.status)) {
+    const now = new Date()
+    const canConfirmAfterEstimatedDelivery =
+      order.status === 'SHIPPED' &&
+      order.estimatedDelivery instanceof Date &&
+      now >= order.estimatedDelivery
+
+    if (!['AWAITING_DELIVERY_CONFIRMATION', 'DELIVERED'].includes(order.status) && !canConfirmAfterEstimatedDelivery) {
       return NextResponse.json(
-        { success: false, error: i18nText(language, 'لا يمكن تأكيد الاستلام في الحالة الحالية', 'Cannot confirm delivery for current status') },
+        { success: false, error: i18nText(language, 'ط¸â€‍ط·آ§ ط¸ظ¹ط¸â€¦ط¸ئ’ط¸â€  ط·ع¾ط·آ£ط¸ئ’ط¸ظ¹ط·آ¯ ط·آ§ط¸â€‍ط·آ§ط·آ³ط·ع¾ط¸â€‍ط·آ§ط¸â€¦ ط¸ظ¾ط¸ظ¹ ط·آ§ط¸â€‍ط·آ­ط·آ§ط¸â€‍ط·آ© ط·آ§ط¸â€‍ط·آ­ط·آ§ط¸â€‍ط¸ظ¹ط·آ©', 'Cannot confirm delivery for current status') },
         { status: 400 },
       )
     }
@@ -62,7 +76,7 @@ export async function POST(request: Request, { params }: Params) {
         status: 'DELIVERED',
         actorUserId: user.id,
         language,
-        note: i18nText(language, 'قام التاجر بتأكيد الاستلام', 'Merchant confirmed delivery'),
+        note: i18nText(language, 'ط¸â€ڑط·آ§ط¸â€¦ ط·آ§ط¸â€‍ط·ع¾ط·آ§ط·آ¬ط·آ± ط·آ¨ط·ع¾ط·آ£ط¸ئ’ط¸ظ¹ط·آ¯ ط·آ§ط¸â€‍ط·آ§ط·آ³ط·ع¾ط¸â€‍ط·آ§ط¸â€¦', 'Merchant confirmed delivery'),
       })
 
       const closed = await tx.order.update({
@@ -78,30 +92,68 @@ export async function POST(request: Request, { params }: Params) {
         status: 'ORDER_CLOSED',
         actorUserId: user.id,
         language,
-        note: i18nText(language, 'تم إغلاق الطلب بعد تأكيد الاستلام', 'Order closed after delivery confirmation'),
+        note: i18nText(language, 'ط·ع¾ط¸â€¦ ط·آ¥ط·ط›ط¸â€‍ط·آ§ط¸â€ڑ ط·آ§ط¸â€‍ط·آ·ط¸â€‍ط·آ¨ ط·آ¨ط·آ¹ط·آ¯ ط·ع¾ط·آ£ط¸ئ’ط¸ظ¹ط·آ¯ ط·آ§ط¸â€‍ط·آ§ط·آ³ط·ع¾ط¸â€‍ط·آ§ط¸â€¦', 'Order closed after delivery confirmation'),
       })
 
       return { delivered, closed }
     })
 
     const supplierUserIds = Array.from(new Set(order.items.map((item: SupplierItem) => item.supplier.user.id)))
+    const separator = language === 'ar' ? 'طŒ ' : ', '
+    const itemSummary = (order.items as OrderItemSummary[])
+      .map((item) => {
+        const name = language === 'ar' ? item.product.nameAr || item.product.nameEn : item.product.nameEn || item.product.nameAr
+        return `${name ?? '-'} x ${item.quantity}`
+      })
+      .join(separator)
+
+    const addressSummary = order.address
+      ? `${order.address.country} - ${order.address.city}${order.address.state ? ` - ${order.address.state}` : ''} | ${order.address.address}`
+      : (language === 'ar' ? 'ط؛ظٹط± ظ…ط­ط¯ط¯' : 'Not provided')
+
     await notifyUsers({
       userIds: supplierUserIds,
       type: NotificationType.DELIVERY_CONFIRMED,
-      title: i18nText(language, `تم تأكيد استلام الطلب ${order.orderNumber}`, `Delivery confirmed for ${order.orderNumber}`),
+      title: i18nText(language, `تأكيد استلام البضاعة ${order.orderNumber}`, `Delivery confirmed for ${order.orderNumber}`),
       message: i18nText(
         language,
-        'أكد التاجر استلام الطلب وتم إغلاقه.',
-        'Merchant confirmed delivery and order has been closed.',
+        'التاجر أكد استلام البضاعة. الرجاء تأكيد استلام المال النقدي لإكمال الطلب وطلب التحويل.',
+        'Trader confirmed goods receipt. Please confirm cash payment received to complete order and request payout.',
       ),
       data: { orderId: order.id, orderNumber: order.orderNumber },
     })
 
     await notifyAdmins({
       type: NotificationType.DELIVERY_CONFIRMED,
-      title: i18nText(language, `إغلاق الطلب ${order.orderNumber}`, `Order ${order.orderNumber} closed`),
-      message: i18nText(language, 'أكد التاجر التسليم وتم إغلاق الطلب.', 'Merchant confirmed delivery and order is closed.'),
-      data: { orderId: order.id, orderNumber: order.orderNumber },
+      title: i18nText(language, `طھظ… طھط³ظ„ظٹظ… ط§ظ„ط·ظ„ط¨ ${order.orderNumber}`, `Order ${order.orderNumber} delivered`),
+      message: i18nText(
+        language,
+        `طھظ… طھط£ظƒظٹط¯ ط§ظ„طھط³ظ„ظٹظ…. ط§ظ„طھط§ط¬ط±: ${order.trader?.user?.name || '-'}طŒ ط§ظ„ط¹ظ†ط§طµط±: ${itemSummary || '-'}. ط·ط±ظٹظ‚ط© ط§ظ„ط´ط­ظ†: ${order.shippingMethod || '-'}طŒ ط±ظ‚ظ… ط§ظ„طھطھط¨ط¹: ${order.trackingNumber || '-'}طŒ ط§ظ„ط¹ظ†ظˆط§ظ†: ${addressSummary}.`,
+        `Delivery confirmed. Trader: ${order.trader?.user?.name || '-'}, items: ${itemSummary || '-'}. Shipping method: ${order.shippingMethod || '-'}, tracking: ${order.trackingNumber || '-'}, address: ${addressSummary}.`,
+      ),
+      data: {
+        orderId: order.id,
+        orderNumber: order.orderNumber,
+        traderName: order.trader?.user?.name || null,
+        items: order.items.map((item) => ({
+          name: item.product.nameAr || item.product.nameEn || '-',
+          quantity: item.quantity,
+        })),
+        shippingMethod: order.shippingMethod || null,
+        trackingNumber: order.trackingNumber || null,
+        address: order.address
+          ? {
+              title: order.address.title,
+              recipient: order.address.recipient,
+              phone: order.address.phone,
+              country: order.address.country,
+              city: order.address.city,
+              state: order.address.state,
+              address: order.address.address,
+              postalCode: order.address.postalCode,
+            }
+          : null,
+      },
     })
 
     await writeAuditLog({
@@ -117,11 +169,10 @@ export async function POST(request: Request, { params }: Params) {
     return NextResponse.json({
       success: true,
       data: updated.closed,
-      message: i18nText(language, 'تم تأكيد الاستلام وإغلاق الطلب', 'Delivery confirmed and order closed'),
+      message: i18nText(language, 'ط·ع¾ط¸â€¦ ط·ع¾ط·آ£ط¸ئ’ط¸ظ¹ط·آ¯ ط·آ§ط¸â€‍ط·آ§ط·آ³ط·ع¾ط¸â€‍ط·آ§ط¸â€¦ ط¸ث†ط·آ¥ط·ط›ط¸â€‍ط·آ§ط¸â€ڑ ط·آ§ط¸â€‍ط·آ·ط¸â€‍ط·آ¨', 'Delivery confirmed and order closed'),
     })
   } catch (error) {
     console.error('Failed to confirm delivery:', error)
     return NextResponse.json({ success: false, error: 'Failed to confirm delivery' }, { status: 500 })
   }
 }
-

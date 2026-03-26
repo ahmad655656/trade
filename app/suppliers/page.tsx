@@ -70,16 +70,16 @@ export default function SuppliersPage({ searchParams }: SuppliersPageProps) {
 
   const content = {
     ar: {
-      title: 'الموردون المعتمدون',
-      description: 'اكتشف موردين موثّقين مع مؤشرات الثقة والتقييم والنشاط التجاري.',
-      searchPlaceholder: 'ابحث عن مورد...',
+      title: 'شبكة الموردين الموثوقين',
+      description: 'اكتشف موردين معتمدين بمؤشرات الثقة، تقييمات حقيقية، وإحصاءات الأداء التجاري المتقدمة.',
+      searchPlaceholder: 'ابحث عن مورد تجاري موثوق...',
       products: 'منتج',
       products_plural: 'منتجات',
       rating: 'التقييم',
       reviews: 'تقييم',
-      viewProfile: 'عرض الملف',
-      noSuppliers: 'لا يوجد موردون',
-      noSuppliersDesc: 'لم يتم العثور على موردين',
+      viewProfile: 'استعرض الملف التجاري',
+      noSuppliers: 'لا توجد نتائج',
+      noSuppliersDesc: 'لم نجد موردين يطابقون معايير البحث. جرب تعديل الفلاتر.',
       verified: 'موثّق',
       all: 'الكل',
       sortNewest: 'الأحدث',
