@@ -130,7 +130,7 @@ export default function Footer() {
           <div className="flex items-center gap-2 text-sm text-muted">
             <span className="h-2 w-2 rounded-full bg-[var(--app-primary)]" />
             <span>
-              © {currentYear} {t('nav.brand')}. {isArabic ? 'جميع الحقوق محفوظة.' : 'All rights reserved.'}
+              (c) {currentYear} {t('nav.brand')}. {isArabic ? 'جميع الحقوق محفوظة.' : 'All rights reserved.'}
             </span>
           </div>
 

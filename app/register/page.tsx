@@ -46,6 +46,43 @@ function RegisterForm() {
     return role === 'SUPPLIER' ? 'SUPPLIER' : 'TRADER'
   }, [searchParams])
 
+  const copy = useMemo(
+    () => ({
+      accountType: language === 'ar'
+        ? 'نوع الحساب'
+        : 'Account type',
+      trader: language === 'ar' ? 'تاجر' : 'Trader',
+      supplier: language === 'ar' ? 'مورد' : 'Supplier',
+      fullName: language === 'ar' ? 'الاسم الكامل' : 'Full name',
+      phone: language === 'ar'
+        ? 'رقم الهاتف (إلزامي للتحقق)'
+        : 'Phone number (required for verification)',
+      email: language === 'ar' ? 'البريد الإلكتروني' : 'Email',
+      company: language === 'ar'
+        ? 'اسم الشركة / المتجر (إلزامي للتحقق)'
+        : 'Company / store name (required for verification)',
+      commercial: language === 'ar'
+        ? 'السجل التجاري / الرقم الضريبي (إلزامي)'
+        : 'Commercial register / tax ID (required)',
+      tax: language === 'ar'
+        ? 'رقم السجل الضريبي (إلزامي)'
+        : 'Tax number (required)',
+      identity: language === 'ar'
+        ? 'صورة الهوية / السجل التجاري (إلزامي للموافقة)'
+        : 'ID or commercial register (required for approval)',
+      terms: language === 'ar'
+        ? 'أوافق على شروط الخدمة والخصوصية، وأفهم أن الحساب يتطلب موافقة التحقق'
+        : 'I agree to the terms and privacy policy and understand the account requires verification approval.',
+      password: language === 'ar' ? 'كلمة المرور' : 'Password',
+      confirmPassword: language === 'ar' ? 'تأكيد كلمة المرور' : 'Confirm password',
+      success: language === 'ar'
+        ? 'تم إرسال طلب التسجيل. سيصلك بريد عند الموافقة.'
+        : 'Registration submitted. You will receive an email once approved.',
+      failed: language === 'ar' ? 'فشل' : 'Failed',
+    }),
+    [language],
+  )
+
   const {
     register,
     handleSubmit,
@@ -92,14 +129,10 @@ function RegisterForm() {
         throw new Error(result.error ?? 'Registration failed')
       }
 
-      toast.success(
-        language === 'ar'
-          ? '�� ����� ��� �������. ����� ���� ��� ��������.'
-          : 'Registration submitted. You will receive an email once approved.',
-      )
+      toast.success(copy.success)
       router.push('/login')
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : language === 'ar' ? '���' : 'Failed')
+      toast.error(error instanceof Error ? error.message : copy.failed)
     } finally {
       setIsLoading(false)
     }
@@ -112,51 +145,51 @@ function RegisterForm() {
 
       <form className="mt-6 grid gap-4 md:grid-cols-2" onSubmit={handleSubmit(onSubmit)}>
         <div className="md:col-span-2">
-          <label className="block text-sm font-medium text-app">��� ������</label>
+          <label className="block text-sm font-medium text-app">{copy.accountType}</label>
           <select {...register('role')} className="input-pro mt-1">
-            <option value="TRADER">����</option>
-            <option value="SUPPLIER">����</option>
+            <option value="TRADER">{copy.trader}</option>
+            <option value="SUPPLIER">{copy.supplier}</option>
           </select>
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-app">����� ������</label>
+          <label className="block text-sm font-medium text-app">{copy.fullName}</label>
           <input {...register('name')} className="input-pro mt-1" />
           {errors.name && <p className="mt-1 text-sm text-red-500">{errors.name.message}</p>}
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-app">��� ������ (������ ������)</label>
+          <label className="block text-sm font-medium text-app">{copy.phone}</label>
           <input {...register('phone')} className="input-pro mt-1" dir="ltr" />
           {errors.phone && <p className="mt-1 text-sm text-red-500">{errors.phone.message}</p>}
         </div>
 
         <div className="md:col-span-2">
-          <label className="block text-sm font-medium text-app">������ ����������</label>
+          <label className="block text-sm font-medium text-app">{copy.email}</label>
           <input {...register('email')} type="email" className="input-pro mt-1" dir="ltr" />
           {errors.email && <p className="mt-1 text-sm text-red-500">{errors.email.message}</p>}
         </div>
 
         <div className="md:col-span-2">
-          <label className="block text-sm font-medium text-app">��� ������ / ������ (������ ������)</label>
+          <label className="block text-sm font-medium text-app">{copy.company}</label>
           <input {...register('companyName')} className="input-pro mt-1" />
           {errors.companyName && <p className="mt-1 text-sm text-red-500">{errors.companyName.message}</p>}
         </div>
 
         <div className="md:col-span-2">
-          <label className="block text-sm font-medium text-app">����� ������� / ����� ������� (������)</label>
+          <label className="block text-sm font-medium text-app">{copy.commercial}</label>
           <input {...register('commercialRegister')} className="input-pro mt-1" />
           {errors.commercialRegister && <p className="mt-1 text-sm text-red-500">{errors.commercialRegister.message}</p>}
         </div>
 
         <div className="md:col-span-2">
-          <label className="block text-sm font-medium text-app">��� ����� ������� (������)</label>
+          <label className="block text-sm font-medium text-app">{copy.tax}</label>
           <input {...register('taxNumber')} className="input-pro mt-1" dir="ltr" />
           {errors.taxNumber && <p className="mt-1 text-sm text-red-500">{errors.taxNumber.message}</p>}
         </div>
 
         <div className="md:col-span-2">
-          <label className="block text-sm font-medium text-app">���� ������ / ����� ������� (������ ��������)</label>
+          <label className="block text-sm font-medium text-app">{copy.identity}</label>
           <input type="file" accept="image/*,.pdf" className="input-pro mt-1 file-input" />
           {/* File validation handled server-side */}
         </div>
@@ -164,19 +197,19 @@ function RegisterForm() {
         <div className="md:col-span-2">
           <label className="flex items-center gap-2">
             <input type="checkbox" {...register('termsAccepted')} />
-            ����� ��� ���� ������ ��������ɡ ����� �� ������ ����� ������ ������
+            {copy.terms}
           </label>
           {errors.termsAccepted && <p className="mt-1 text-sm text-red-500">{errors.termsAccepted.message}</p>}
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-app">���� ������</label>
+          <label className="block text-sm font-medium text-app">{copy.password}</label>
           <input {...register('password')} type="password" className="input-pro mt-1" dir="ltr" />
           {errors.password && <p className="mt-1 text-sm text-red-500">{errors.password.message}</p>}
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-app">����� ���� ������</label>
+          <label className="block text-sm font-medium text-app">{copy.confirmPassword}</label>
           <input {...register('confirmPassword')} type="password" className="input-pro mt-1" dir="ltr" />
           {errors.confirmPassword && <p className="mt-1 text-sm text-red-500">{errors.confirmPassword.message}</p>}
         </div>
