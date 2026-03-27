@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import { createContext, useContext, useEffect, useMemo, useState } from 'react'
 
@@ -14,6 +14,7 @@ const dictionary: Dictionary = {
   'nav.products': { ar: 'المنتجات', en: 'Products' },
   'nav.dashboard': { ar: 'لوحة التحكم', en: 'Dashboard' },
   'nav.messages': { ar: 'الرسائل', en: 'Messages' },
+  'nav.notifications': { ar: 'الإشعارات', en: 'Notifications' },
   'nav.login': { ar: 'تسجيل الدخول', en: 'Login' },
   'nav.register': { ar: 'إنشاء حساب', en: 'Register' },
   'nav.logout': { ar: 'تسجيل الخروج', en: 'Logout' },
@@ -22,12 +23,16 @@ const dictionary: Dictionary = {
   'nav.trader': { ar: 'تاجر', en: 'Trader' },
   'nav.themeLight': { ar: 'فاتح', en: 'Light' },
   'nav.themeDark': { ar: 'داكن', en: 'Dark' },
-  'home.title': { ar: 'منصة B2B احترافية وآمنة', en: 'Professional and Secure B2B Platform' },
+  'nav.searchPlaceholder': { ar: 'ابحث عن المنتجات أو الموردين أو العروض...', en: 'Search products, suppliers, or deals...' },
+  'home.badge': { ar: 'منصة للتجار والموردين', en: 'For Traders & Suppliers' },
+  'home.title': { ar: 'كل احتياجات محلك من الموردين… بخطوات بسيطة', en: 'Everything your store needs from suppliers—in simple steps.' },
   'home.description': {
-    ar: 'نظام متكامل يربط المدير والموردين والتجار مع مصادقة قوية وإدارة أدوار دقيقة.',
-    en: 'A complete system connecting admins, suppliers, and traders with strong authentication and strict role control.',
+    ar: 'سجّل كتاجر أو مورد وابدأ الطلبات والعروض بدون تعقيد. واجهة واضحة للجميع.',
+    en: 'Join as a trader or supplier and start orders and offers without complexity. Clear for everyone.',
   },
-  'home.create': { ar: 'إنشاء حساب', en: 'Create account' },
+  'home.create': { ar: 'ابدأ الآن', en: 'Get started' },
+  'home.ctaTrader': { ar: 'أنا تاجر', en: 'I am a Trader' },
+  'home.ctaSupplier': { ar: 'أنا مورد', en: 'I am a Supplier' },
   'home.login': { ar: 'تسجيل الدخول', en: 'Login' },
   'home.adminTitle': { ar: 'المدير', en: 'Admin' },
   'home.adminDesc': { ar: 'إدارة المستخدمين والموردين والمدفوعات والتقارير.', en: 'Manage users, suppliers, payments, and reports.' },

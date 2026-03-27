@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import Link from 'next/link'
 import { useUi } from '@/components/providers/UiProvider'
@@ -84,8 +84,8 @@ export default function Footer() {
 
             <p className="mt-4 text-sm leading-relaxed text-muted">
               {isArabic
-                ? 'منصة تجارة B2B احترافية تربط الموردين والتجار في بيئة آمنة وموثوقة.'
-                : 'Professional B2B trading platform connecting suppliers and traders in a secure environment.'}
+                ? 'منصة بسيطة تربط أصحاب المحال بالموردين لتسهيل الطلبات والعروض.'
+                : 'A simple platform connecting store owners and suppliers to streamline orders and offers.'}
             </p>
 
             <div className="mt-5 space-y-2">
@@ -160,4 +160,3 @@ export default function Footer() {
     </footer>
   )
 }
-

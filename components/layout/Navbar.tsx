@@ -10,7 +10,7 @@ import {
   Squares2X2Icon,
   MagnifyingGlassIcon,
   XMarkIcon,
-  Bars3Icon
+  Bars3Icon,
 } from '@heroicons/react/24/outline'
 
 import { useUi } from '@/components/providers/UiProvider'
@@ -59,6 +59,7 @@ type ApiResponse<T> = {
 
 export default function Navbar() {
   const { language, setLanguage, theme, toggleTheme, t } = useUi()
+  const isArabic = language === 'ar'
   const pathname = usePathname()
   const router = useRouter()
 
@@ -88,10 +89,45 @@ export default function Navbar() {
   }, [])
 
   const navLinks = [
-    { href: '/products', label: t('nav.products') || 'المنتجات' },
-    { href: '/suppliers', label: t('nav.suppliers') || 'الموردون' },
-    { href: '/about', label: t('nav.about') || 'عن المنصة' }
+    { href: '/products', label: t('nav.products') },
+    { href: '/suppliers', label: t('nav.suppliers') },
+    { href: '/about', label: t('nav.about') },
   ]
+
+  const roleLabels = useMemo(
+    () => ({
+      ADMIN: t('nav.admin'),
+      SUPPLIER: t('nav.supplier'),
+      TRADER: t('nav.trader'),
+    }),
+    [language, t],
+  )
+
+  const copy = useMemo(
+    () => ({
+      notifications: t('nav.notifications'),
+      messages: t('nav.messages'),
+      searchPlaceholder: t('nav.searchPlaceholder'),
+      dashboard: t('nav.dashboard'),
+      logout: t('nav.logout'),
+      login: t('nav.login'),
+      register: t('nav.register'),
+      themeLight: t('nav.themeLight'),
+      themeDark: t('nav.themeDark'),
+      notificationSubtitle: isArabic ? 'ابقَ على اطلاع بآخر المستجدات' : 'Stay updated with the latest',
+      close: isArabic ? 'إغلاق' : 'Close',
+      noNotifications: isArabic ? 'لا توجد إشعارات بعد' : 'No notifications yet',
+      noNotificationsHint: isArabic ? 'سنعلمك عند حدوث أي جديد' : 'We will notify you when something new happens',
+      registrationPending: isArabic ? 'تسجيل جديد بانتظار الموافقة' : 'New registration pending approval',
+      labelName: isArabic ? 'الاسم' : 'Name',
+      labelRole: isArabic ? 'الدور' : 'Role',
+      labelEmail: isArabic ? 'البريد الإلكتروني' : 'Email',
+      labelPhone: isArabic ? 'الهاتف' : 'Phone',
+      labelCompany: isArabic ? 'الشركة' : 'Company',
+      markAllRead: isArabic ? 'تحديد الكل كمقروء' : 'Mark all as read',
+    }),
+    [isArabic, t],
+  )
 
   // Load current user
   useEffect(() => {
@@ -205,7 +241,10 @@ export default function Navbar() {
         const top = Math.round(rect.bottom + 8)
         const width = 340
         const maxLeft = window.innerWidth - width - 16
-        const left = Math.min(Math.max(16, Math.round(rect.left - (language === 'ar' ? width - rect.width : 0))), maxLeft)
+        const left = Math.min(
+          Math.max(16, Math.round(rect.left - (language === 'ar' ? width - rect.width : 0))),
+          maxLeft,
+        )
         setNotifPos({ top, left })
       }
       update()
@@ -238,7 +277,9 @@ export default function Navbar() {
     trackPopularSearches(value)
     setSearchLoading(true)
     try {
-      const data = await fetchJson<SearchableItem[]>(`/api/search/data?q=${encodeURIComponent(value)}&limit=10&type=all`)
+      const data = await fetchJson<SearchableItem[]>(
+        `/api/search/data?q=${encodeURIComponent(value)}&limit=10&type=all`,
+      )
       if (data?.success) setResults(data.data ?? [])
       else setResults([])
     } catch {
@@ -282,20 +323,12 @@ export default function Navbar() {
     return '/trader'
   }, [user])
 
-  const unreadNotifications = notifications.filter(n => !n.read).length
+  const unreadNotifications = notifications.filter((n) => !n.read).length
 
-  const roleLabels: Record<Role, { en: string; ar: string }> = {
-    ADMIN: { en: 'Admin', ar: 'مدير' },
-    SUPPLIER: { en: 'Supplier', ar: 'مورد' },
-    TRADER: { en: 'Trader', ar: 'تاجر' },
-  }
-
-  const roleLabel = useMemo(() => {
-    return language === 'ar' ? roleLabels[user?.role || 'TRADER'].ar : roleLabels[user?.role || 'TRADER'].en
-  }, [user, language])
+  const roleLabel = user ? roleLabels[user.role] : ''
 
   const formatRoleLabel = (role?: Role, fallback?: string) => {
-    if (role) return language === 'ar' ? roleLabels[role].ar : roleLabels[role].en
+    if (role) return roleLabels[role]
     return fallback ?? '-'
   }
 
@@ -305,7 +338,7 @@ export default function Navbar() {
       month: 'short',
       day: 'numeric',
       hour: '2-digit',
-      minute: '2-digit'
+      minute: '2-digit',
     })
   }
 
@@ -313,324 +346,334 @@ export default function Navbar() {
     <>
       <audio ref={notificationSoundRef} src="/sound/soneynotification.mp3" preload="auto" />
       <header className="sticky mb-7 top-0 z-50 overflow-visible border-b border-white/10 bg-[color-mix(in_oklab(var(--app-surface),94%,transparent))] backdrop-blur-2xl shadow-[0_10px_30px_rgba(0,0,0,.08)]">
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[var(--app-primary)]/40 to-transparent" />
-      <div className="container mx-auto px-4 lg:px-6">
-        {/* Main header row: logo + nav (left) | search + user info (right) */}
-        <div className="flex h-16 lg:h-20 items-center justify-between">
-          {/* Left: Logo + nav links */}
-          <div className="flex items-center gap-5 lg:gap-8 min-w-0">
-            <Link href="/" className="group flex items-center p-1 transition-all duration-300 hover:scale-105 hover:rotate-1">
-              <img
-                src={language === 'ar' ? '/logoarabic.png' : '/logo.png'}
-                className="h-9 lg:h-10 transition-all duration-300 group-hover:shadow-lg group-hover:shadow-[var(--app-primary)]/25"
-                alt="logo"
-              />
-            </Link>
-            <nav className="hidden md:flex items-center gap-4 lg:gap-6">
-              {navLinks.map(({ href, label }) => (
-                <Link
-                  key={href}
-                  href={href}
-                  className={`inline-flex items-center rounded-xl px-3 py-2 text-[13px] lg:text-sm font-semibold transition-all ${
-                    pathname === href
-                      ? 'bg-[var(--app-primary)]/15 text-[var(--app-primary)] ring-1 ring-[var(--app-primary)]/30'
-                      : 'text-muted hover:text-app hover:bg-white/5 ring-1 ring-transparent'
-                  }`}
-                >
-                  {label}
-                </Link>
-              ))}
-            </nav>
-            {/* Mobile Menu placeholder */}
-            <button type="button" className="md:hidden p-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 transition-all" aria-label="menu">
-              <Bars3Icon className="h-5 w-5" />
-            </button>
-          </div>
-
-          {/* Right: search + user info (always visible, no dropdown) */}
-          <div className="flex items-center gap-3 lg:gap-5 min-w-0">
-            {/* Search */}
-            <div ref={searchRef} className="relative hidden sm:block w-56 lg:w-80">
-              <input
-                value={query}
-                onChange={(e) => search(e.target.value)}
-                onFocus={() => setSearchOpen(true)}
-                placeholder={language === 'ar' ? 'ابحث عن المنتجات والموردين والتجار والعروض...' : 'Search products, suppliers, traders & deals...'}
-                className="w-full rounded-2xl border border-white/10 bg-[color-mix(in_oklab(var(--app-surface),92%,transparent))] px-4 py-2.5 pr-10 text-sm placeholder:text-muted/70 focus:border-[var(--app-primary)]/50 focus:ring-2 focus:ring-[var(--app-primary)]/20 transition-all duration-300"
-                role="combobox"
-                aria-expanded={searchOpen}
-                aria-controls="global-search-results"
-              />
-              <MagnifyingGlassIcon className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted/70" />
-              {query && (
-                <button
-                  onClick={() => {
-                    setQuery('')
-                    setResults([])
-                  }}
-                  className="absolute right-9 top-1/2 -translate-y-1/2 p-1 hover:bg-white/10 rounded-full transition-all"
-                  aria-label="Clear search"
-                >
-                  <XMarkIcon className="h-4 w-4" />
-                </button>
-              )}
-              {searchOpen && (
-                <AiSearchDropdown
-                  query={query}
-                  results={results}
-                  onClose={() => setSearchOpen(false)}
-                  anchorRef={searchRef}
-                  onQueryChange={search}
-                  loading={searchLoading}
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[var(--app-primary)]/40 to-transparent" />
+        <div className="container mx-auto px-4 lg:px-6">
+          {/* Main header row: logo + nav (left) | search + user info (right) */}
+          <div className="flex h-16 lg:h-20 items-center justify-between">
+            {/* Left: Logo + nav links */}
+            <div className="flex items-center gap-5 lg:gap-8 min-w-0">
+              <Link href="/" className="group flex items-center p-1 transition-all duration-300 hover:scale-105 hover:rotate-1">
+                <img
+                  src={language === 'ar' ? '/logoarabic.png' : '/logo.png'}
+                  className="h-9 lg:h-10 transition-all duration-300 group-hover:shadow-lg group-hover:shadow-[var(--app-primary)]/25"
+                  alt="logo"
                 />
-              )}
+              </Link>
+              <nav className="hidden md:flex items-center gap-4 lg:gap-6">
+                {navLinks.map(({ href, label }) => (
+                  <Link
+                    key={href}
+                    href={href}
+                    className={`inline-flex items-center rounded-xl px-3 py-2 text-[13px] lg:text-sm font-semibold transition-all ${
+                      pathname === href
+                        ? 'bg-[var(--app-primary)]/15 text-[var(--app-primary)] ring-1 ring-[var(--app-primary)]/30'
+                        : 'text-muted hover:text-app hover:bg-white/5 ring-1 ring-transparent'
+                    }`}
+                  >
+                    {label}
+                  </Link>
+                ))}
+              </nav>
+              {/* Mobile Menu placeholder */}
+              <button
+                type="button"
+                className="md:hidden p-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 transition-all"
+                aria-label="menu"
+              >
+                <Bars3Icon className="h-5 w-5" />
+              </button>
             </div>
 
-            {/* User inline info (no dropdown) */}
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="relative h-10 w-10 rounded-2xl overflow-hidden bg-gradient-to-br from-[var(--app-primary)]/20 via-white/10 to-[var(--app-primary)]/10 p-1 ring-2 ring-white/20 shadow-lg hidden sm:block">
-                {user?.avatar ? (
-                  <img src={user.avatar} alt={user?.name || 'user'} className="h-full w-full rounded-xl object-cover" />
+            {/* Right: search + user info (always visible, no dropdown) */}
+            <div className="flex items-center gap-3 lg:gap-5 min-w-0">
+              {/* Search */}
+              <div ref={searchRef} className="relative hidden sm:block w-56 lg:w-80">
+                <input
+                  value={query}
+                  onChange={(e) => search(e.target.value)}
+                  onFocus={() => setSearchOpen(true)}
+                  placeholder={copy.searchPlaceholder}
+                  className="w-full rounded-2xl border border-white/10 bg-[color-mix(in_oklab(var(--app-surface),92%,transparent))] px-4 py-2.5 pr-10 text-sm placeholder:text-muted/70 focus:border-[var(--app-primary)]/50 focus:ring-2 focus:ring-[var(--app-primary)]/20 transition-all duration-300"
+                  role="combobox"
+                  aria-expanded={searchOpen}
+                  aria-controls="global-search-results"
+                />
+                <MagnifyingGlassIcon className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted/70" />
+                {query && (
+                  <button
+                    onClick={() => {
+                      setQuery('')
+                      setResults([])
+                    }}
+                    className="absolute right-9 top-1/2 -translate-y-1/2 p-1 hover:bg-white/10 rounded-full transition-all"
+                    aria-label="Clear search"
+                  >
+                    <XMarkIcon className="h-4 w-4" />
+                  </button>
+                )}
+                {searchOpen && (
+                  <AiSearchDropdown
+                    query={query}
+                    results={results}
+                    onClose={() => setSearchOpen(false)}
+                    anchorRef={searchRef}
+                    onQueryChange={search}
+                    loading={searchLoading}
+                  />
+                )}
+              </div>
+
+              {/* User inline info (no dropdown) */}
+              <div className="flex items-center gap-3 min-w-0">
+                {loading ? (
+                  <div className="h-9 w-28 rounded-xl bg-white/5 animate-pulse" />
+                ) : user ? (
+                  <>
+                    <div className="relative h-10 w-10 rounded-2xl overflow-hidden bg-gradient-to-br from-[var(--app-primary)]/20 via-white/10 to-[var(--app-primary)]/10 p-1 ring-2 ring-white/20 shadow-lg hidden sm:block">
+                      {user?.avatar ? (
+                        <img src={user.avatar} alt={user?.name || 'user'} className="h-full w-full rounded-xl object-cover" />
+                      ) : (
+                        <div className="h-full w-full rounded-xl bg-gradient-to-br from-[var(--app-primary)]/80 to-[var(--app-primary)] flex items-center justify-center text-sm font-bold text-white">
+                          {(user?.name || 'U').charAt(0).toUpperCase()}
+                        </div>
+                      )}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-bold text-app max-w-[160px] lg:max-w-[220px]">
+                        {user?.name}
+                      </p>
+                      <div className="mt-0.5 inline-flex items-center gap-2">
+                        <span className="px-2 py-[2px] text-[11px] font-bold rounded-full bg-gradient-to-r from-emerald-500/20 to-purple-500/20 text-emerald-700 border border-emerald-200/50">
+                          {roleLabel}
+                        </span>
+                        <Link
+                          href={dashboardHref}
+                          className="inline-flex items-center gap-1 text-[11px] font-semibold text-muted hover:text-app hover:bg-white/10 rounded-lg px-2 py-1 transition-colors"
+                        >
+                          <Squares2X2Icon className="h-4 w-4" />
+                          {copy.dashboard}
+                        </Link>
+                        <button
+                          onClick={logout}
+                          className="inline-flex items-center gap-1 text-[11px] font-semibold text-muted hover:text-red-600 hover:bg-red-50/50 rounded-lg px-2 py-1 transition-colors"
+                        >
+                          <ArrowRightOnRectangleIcon className="h-4 w-4" />
+                          {copy.logout}
+                        </button>
+                      </div>
+                    </div>
+                  </>
                 ) : (
-                  <div className="h-full w-full rounded-xl bg-gradient-to-br from-[var(--app-primary)]/80 to-[var(--app-primary)] flex items-center justify-center text-sm font-bold text-white">
-                    {(user?.name || 'U').charAt(0).toUpperCase()}
+                  <div className="flex items-center gap-2">
+                    <Link href="/login" className="btn-secondary text-sm">
+                      {copy.login}
+                    </Link>
+                    <Link href="/register" className="btn-primary text-sm">
+                      {copy.register}
+                    </Link>
                   </div>
                 )}
               </div>
-              <div className="min-w-0">
-                <p className="truncate text-sm font-bold text-app max-w-[160px] lg:max-w-[220px]">
-                  {loading ? (language === 'ar' ? '...' : '...') : (user?.name || (language === 'ar' ? 'ضيف' : 'Guest'))}
-                </p>
-                <div className="mt-0.5 inline-flex items-center gap-2">
-                  <span className="px-2 py-[2px] text-[11px] font-bold rounded-full bg-gradient-to-r from-emerald-500/20 to-purple-500/20 text-emerald-700 border border-emerald-200/50">
-                    {roleLabel}
-                  </span>
-                  {user && (
-                    <Link
-                      href={dashboardHref}
-                      className="inline-flex items-center gap-1 text-[11px] font-semibold text-muted hover:text-app hover:bg-white/10 rounded-lg px-2 py-1 transition-colors"
-                    >
-                      <Squares2X2Icon className="h-4 w-4" />
-                      {language === 'ar' ? 'لوحة التحكم' : 'Dashboard'}
-                    </Link>
-                  )}
-                  {user && (
-                    <button
-                      onClick={logout}
-                      className="inline-flex items-center gap-1 text-[11px] font-semibold text-muted hover:text-red-600 hover:bg-red-50/50 rounded-lg px-2 py-1 transition-colors"
-                    >
-                      <ArrowRightOnRectangleIcon className="h-4 w-4" />
-                      {language === 'ar' ? 'تسجيل الخروج' : 'Logout'}
-                    </button>
-                  )}
-                </div>
-              </div>
             </div>
           </div>
         </div>
-      </div>
-    </header>
+      </header>
 
-    {/* Secondary toolbar: language/theme + notifications/messages */}
-    <div className="absolute inset-x-0 top-16 lg:top-20 z-40 px-4 lg:px-10 py-2 border-b border-white/10 bg-[color-mix(in_oklab(var(--app-surface),98%,transparent))] backdrop-blur-xl">
-      <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
-        {/* Left cluster: notifications + messages */}
-        <div className="flex items-center gap-2">
-          <button
-            ref={notifBtnRef}
-            onClick={() => setOpenNotifications(!openNotifications)}
-            className="relative inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm font-semibold hover:bg-white/10 transition-all"
-            aria-haspopup="menu"
-            aria-expanded={openNotifications}
-          >
-            <BellIcon className="h-5 w-5" />
-            <span>{language === 'ar' ? 'الإشعارات' : 'Notifications'}</span>
-            {unreadNotifications > 0 && (
-              <span className="absolute -top-1 -right-1 inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-red-500 text-[11px] font-bold text-white px-1 shadow">
-                {unreadNotifications}
-              </span>
-            )}
-          </button>
-          <Link
-            href="/messages"
-            className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm font-semibold hover:bg-white/10 transition-all"
-          >
-            <span>{language === 'ar' ? 'الرسائل' : 'Messages'}</span>
-            {messageUnread > 0 && (
-              <span className="ml-1 inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-blue-500 text-[11px] font-bold text-white px-1">
-                {messageUnread}
-              </span>
-            )}
-          </Link>
-        </div>
-
-        {/* grow spacer */}
-        <div className="grow" />
-
-        {/* Right cluster: language + theme */}
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setLanguage(language === 'ar' ? 'en' : 'ar')}
-            className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-xs font-bold hover:bg-white/10 transition-all"
-            aria-label="Toggle language"
-          >
-            <span suppressHydrationWarning aria-hidden="true">{mounted ? (language === 'ar' ? 'EN' : 'AR') : 'AR'}</span>
-          </button>
-          <button
-            onClick={toggleTheme}
-            className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 transition-all"
-            aria-label="Toggle theme"
-          >
-            <span suppressHydrationWarning aria-hidden="true">
-              {mounted
-                ? (theme === 'dark'
-                    ? (language === 'ar' ? 'داكن' : 'Dark')
-                    : (language === 'ar' ? 'فاتح' : 'Light'))
-                : (language === 'ar' ? 'فاتح' : 'Light')}
-            </span>
-          </button>
-        </div>
-      </div>
-
-      {/* Notifications dropdown under toolbar icon */}
-      {openNotifications && (
-        <div
-          ref={notificationRef}
-          className="fixed z-[9998] w-[300px] max-w-[95vw] rounded-3xl bg-[var(--app-surface)]/90 backdrop-blur-3xl shadow-2xl shadow-black/25 overflow-hidden"
-          style={{ top: '20px', left: notifPos.left }}
-        >
-          <div className="px-6 py-4 border-b border-white/20 bg-gradient-to-r from-[color-mix(in_oklab(var(--app-surface),90%,transparent))] to-[color-mix(in_oklab(var(--app-surface),85%,transparent))] backdrop-blur-3xl flex items-center gap-3 sticky top-0">
-            <div className="h-10 w-10 rounded-2xl bg-gradient-to-br from-amber-400 via-orange-500 to-red-500 p-2 shadow-xl shadow-amber-500/30 flex items-center justify-center">
-              <BellIcon className="h-6 w-6 text-white" />
-            </div>
-            <div className="flex-1">
-              <h3 className="font-bold text-lg text-app">{language === 'ar' ? 'الإشعارات' : 'Notifications'}</h3>
-              <p className="text-xs text-muted/70">{language === 'ar' ? 'ابقَ على اطلاع بآخر المستجدات' : 'Stay updated with latest events'}</p>
-            </div>
+      {/* Secondary toolbar: language/theme + notifications/messages */}
+      <div className="absolute inset-x-0 top-16 lg:top-20 z-40 px-4 lg:px-10 py-2 border-b border-white/10 bg-[color-mix(in_oklab(var(--app-surface),98%,transparent))] backdrop-blur-xl">
+        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
+          {/* Left cluster: notifications + messages */}
+          <div className="flex items-center gap-2">
             <button
-              onClick={() => setOpenNotifications(false)}
-              className="flex h-8 w-8 items-center justify-center rounded-xl text-muted hover:bg-white/10 hover:text-app transition-all duration-200 hover:scale-105"
-              aria-label={language === 'ar' ? 'إغلاق' : 'Close'}
+              ref={notifBtnRef}
+              onClick={() => setOpenNotifications(!openNotifications)}
+              className="relative inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm font-semibold hover:bg-white/10 transition-all"
+              aria-haspopup="menu"
+              aria-expanded={openNotifications}
             >
-              <XMarkIcon className="h-5 w-5" />
+              <BellIcon className="h-5 w-5" />
+              <span>{copy.notifications}</span>
+              {unreadNotifications > 0 && (
+                <span className="absolute -top-1 -right-1 inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-red-500 text-[11px] font-bold text-white px-1 shadow">
+                  {unreadNotifications}
+                </span>
+              )}
+            </button>
+            <Link
+              href="/messages"
+              className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm font-semibold hover:bg-white/10 transition-all"
+            >
+              <span>{copy.messages}</span>
+              {messageUnread > 0 && (
+                <span className="ml-1 inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-blue-500 text-[11px] font-bold text-white px-1">
+                  {messageUnread}
+                </span>
+              )}
+            </Link>
+          </div>
+
+          {/* grow spacer */}
+          <div className="grow" />
+
+          {/* Right cluster: language + theme */}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setLanguage(language === 'ar' ? 'en' : 'ar')}
+              className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-xs font-bold hover:bg-white/10 transition-all"
+              aria-label="Toggle language"
+            >
+              <span suppressHydrationWarning aria-hidden="true">{mounted ? (language === 'ar' ? 'EN' : 'AR') : 'AR'}</span>
+            </button>
+            <button
+              onClick={toggleTheme}
+              className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 transition-all"
+              aria-label="Toggle theme"
+            >
+              <span suppressHydrationWarning aria-hidden="true">
+                {mounted ? (theme === 'dark' ? copy.themeDark : copy.themeLight) : copy.themeLight}
+              </span>
             </button>
           </div>
-          <div className="max-h-[70vh] overflow-y-auto custom-scrollbar">
-            {notifications.length === 0 ? (
-              <div className="flex flex-col items-center justify-center p-12 text-center">
-                <div className="h-16 w-16 rounded-3xl bg-gradient-to-br from-blue-500/20 to-purple-500/20 p-4 mb-4 flex items-center justify-center">
-                  <BellIcon className="h-8 w-8 text-muted/40" />
-                </div>
-                <p className="text-base font-semibold text-muted mb-2">{language === 'ar' ? 'لا توجد إشعارات بعد' : 'No notifications yet'}</p>
-                <p className="text-sm text-muted/60">{language === 'ar' ? 'سنخطرك عند حدوث أي جديد' : 'Well notify you when something new happens'}</p>
+        </div>
+
+        {/* Notifications dropdown under toolbar icon */}
+        {openNotifications && (
+          <div
+            ref={notificationRef}
+            className="fixed z-[9998] w-[300px] max-w-[95vw] rounded-3xl bg-[var(--app-surface)]/90 backdrop-blur-3xl shadow-2xl shadow-black/25 overflow-hidden"
+            style={{ top: '20px', left: notifPos.left }}
+          >
+            <div className="px-6 py-4 border-b border-white/20 bg-gradient-to-r from-[color-mix(in_oklab(var(--app-surface),90%,transparent))] to-[color-mix(in_oklab(var(--app-surface),85%,transparent))] backdrop-blur-3xl flex items-center gap-3 sticky top-0">
+              <div className="h-10 w-10 rounded-2xl bg-gradient-to-br from-amber-400 via-orange-500 to-red-500 p-2 shadow-xl shadow-amber-500/30 flex items-center justify-center">
+                <BellIcon className="h-6 w-6 text-white" />
               </div>
-            ) : (
-              <div className="p-3 space-y-2">
-                {notifications.map((n) => {
-                  const isRegistration = n.data?.kind === 'REGISTRATION_PENDING'
-                  const displayTitle = isRegistration
-                    ? (language === 'ar' ? 'تسجيل جديد بانتظار الموافقة' : 'New registration pending approval')
-                    : n.title
-                  const detailItems = isRegistration
-                    ? [
-                        { label: language === 'ar' ? 'الاسم' : 'Name', value: n.data?.name },
-                        { label: language === 'ar' ? 'الدور' : 'Role', value: formatRoleLabel(n.data?.role, n.data?.roleLabel) },
-                        { label: language === 'ar' ? 'البريد الإلكتروني' : 'Email', value: n.data?.email },
-                        { label: language === 'ar' ? 'الهاتف' : 'Phone', value: n.data?.phone },
-                        { label: language === 'ar' ? 'الشركة' : 'Company', value: n.data?.companyName },
-                      ]
-                    : []
+              <div className="flex-1">
+                <h3 className="font-bold text-lg text-app">{copy.notifications}</h3>
+                <p className="text-xs text-muted/70">{copy.notificationSubtitle}</p>
+              </div>
+              <button
+                onClick={() => setOpenNotifications(false)}
+                className="flex h-8 w-8 items-center justify-center rounded-xl text-muted hover:bg-white/10 hover:text-app transition-all duration-200 hover:scale-105"
+                aria-label={copy.close}
+              >
+                <XMarkIcon className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="max-h-[70vh] overflow-y-auto custom-scrollbar">
+              {notifications.length === 0 ? (
+                <div className="flex flex-col items-center justify-center p-12 text-center">
+                  <div className="h-16 w-16 rounded-3xl bg-gradient-to-br from-blue-500/20 to-purple-500/20 p-4 mb-4 flex items-center justify-center">
+                    <BellIcon className="h-8 w-8 text-muted/40" />
+                  </div>
+                  <p className="text-base font-semibold text-muted mb-2">{copy.noNotifications}</p>
+                  <p className="text-sm text-muted/60">{copy.noNotificationsHint}</p>
+                </div>
+              ) : (
+                <div className="p-3 space-y-2">
+                  {notifications.map((n) => {
+                    const isRegistration = n.data?.kind === 'REGISTRATION_PENDING'
+                    const displayTitle = isRegistration ? copy.registrationPending : n.title
+                    const detailItems = isRegistration
+                      ? [
+                          { label: copy.labelName, value: n.data?.name },
+                          { label: copy.labelRole, value: formatRoleLabel(n.data?.role, n.data?.roleLabel) },
+                          { label: copy.labelEmail, value: n.data?.email },
+                          { label: copy.labelPhone, value: n.data?.phone },
+                          { label: copy.labelCompany, value: n.data?.companyName },
+                        ]
+                      : []
 
-                  return (
-                    <div
-                      key={n.id}
-                      className={`group relative flex items-start gap-4 rounded-2xl p-4 transition-all duration-300 hover:scale-[1.02] cursor-pointer ${
-                        n.read
-                          ? 'bg-gradient-to-r from-white/5 to-white/10 hover:from-white/10 hover:to-white/15'
-                          : 'bg-gradient-to-r from-[var(--app-primary)]/10 via-[var(--app-primary)]/15 to-[var(--app-primary)]/10 hover:from-[var(--app-primary)]/15 hover:via-[var(--app-primary)]/20 hover:to-[var(--app-primary)]/15 shadow-lg shadow-[var(--app-primary)]/20'
-                      } border border-white/10 hover:border-white/20`}
-                    >
-                      <div className={`mt-1 h-3 w-3 rounded-full flex-shrink-0 transition-all duration-300 ${
-                        n.read
-                          ? 'bg-muted/40 group-hover:bg-muted/60'
-                          : 'bg-gradient-to-r from-[var(--app-primary)] to-[var(--app-primary)]/80 shadow-lg shadow-[var(--app-primary)]/50'
-                      }`} />
+                    return (
+                      <div
+                        key={n.id}
+                        className={`group relative flex items-start gap-4 rounded-2xl p-4 transition-all duration-300 hover:scale-[1.02] cursor-pointer ${
+                          n.read
+                            ? 'bg-gradient-to-r from-white/5 to-white/10 hover:from-white/10 hover:to-white/15'
+                            : 'bg-gradient-to-r from-[var(--app-primary)]/10 via-[var(--app-primary)]/15 to-[var(--app-primary)]/10 hover:from-[var(--app-primary)]/15 hover:via-[var(--app-primary)]/20 hover:to-[var(--app-primary)]/15 shadow-lg shadow-[var(--app-primary)]/20'
+                        } border border-white/10 hover:border-white/20`}
+                      >
+                        <div
+                          className={`mt-1 h-3 w-3 rounded-full flex-shrink-0 transition-all duration-300 ${
+                            n.read
+                              ? 'bg-muted/40 group-hover:bg-muted/60'
+                              : 'bg-gradient-to-r from-[var(--app-primary)] to-[var(--app-primary)]/80 shadow-lg shadow-[var(--app-primary)]/50'
+                          }`}
+                        />
 
-                      <div className={`h-10 w-10 rounded-xl flex-shrink-0 flex items-center justify-center transition-all duration-300 ${
-                        n.read
-                          ? 'bg-gradient-to-br from-gray-500/20 to-gray-600/20'
-                          : 'bg-gradient-to-br from-[var(--app-primary)]/20 to-[var(--app-primary)]/30 shadow-lg'
-                      }`}>
-                        <div className={`h-5 w-5 rounded-lg ${
-                          n.read ? 'bg-gray-400' : 'bg-gradient-to-r from-[var(--app-primary)] to-[var(--app-primary)]/80'
-                        }`} />
-                      </div>
+                        <div
+                          className={`h-10 w-10 rounded-xl flex-shrink-0 flex items-center justify-center transition-all duration-300 ${
+                            n.read
+                              ? 'bg-gradient-to-br from-gray-500/20 to-gray-600/20'
+                              : 'bg-gradient-to-br from-[var(--app-primary)]/20 to-[var(--app-primary)]/30 shadow-lg'
+                          }`}
+                        >
+                          <div
+                            className={`h-5 w-5 rounded-lg ${
+                              n.read
+                                ? 'bg-gray-400'
+                                : 'bg-gradient-to-r from-[var(--app-primary)] to-[var(--app-primary)]/80'
+                            }`}
+                          />
+                        </div>
 
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="min-w-0 flex-1">
-                            <p className={`font-bold text-sm leading-tight transition-colors ${
-                              n.read ? 'text-app/80' : 'text-app'
-                            }`}>
-                              {displayTitle}
-                            </p>
-                            {isRegistration ? (
-                              <div className="mt-2 space-y-1 text-xs text-muted">
-                                {detailItems.map((item) => (
-                                  <div key={item.label} className="flex items-center justify-between gap-3">
-                                    <span className="font-semibold text-muted">{item.label}</span>
-                                    <span className="text-app/90 truncate">{item.value || '-'}</span>
-                                  </div>
-                                ))}
-                              </div>
-                            ) : n.message ? (
-                              <p className="mt-1.5 text-sm text-muted leading-relaxed line-clamp-2">
-                                {n.message}
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0 flex-1">
+                              <p
+                                className={`font-bold text-sm leading-tight transition-colors ${
+                                  n.read ? 'text-app/80' : 'text-app'
+                                }`}
+                              >
+                                {displayTitle}
                               </p>
-                            ) : null}
+                              {isRegistration ? (
+                                <div className="mt-2 space-y-1 text-xs text-muted">
+                                  {detailItems.map((item) => (
+                                    <div key={item.label} className="flex items-center justify-between gap-3">
+                                      <span className="font-semibold text-muted">{item.label}</span>
+                                      <span className="text-app/90 truncate">{item.value || '-'}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              ) : n.message ? (
+                                <p className="mt-1.5 text-sm text-muted leading-relaxed line-clamp-2">
+                                  {n.message}
+                                </p>
+                              ) : null}
+                            </div>
+                          </div>
+
+                          <div className="flex items-center justify-between mt-3">
+                            <p className="text-xs font-medium text-muted/70">
+                              {formatNotificationDate(n.createdAt)}
+                            </p>
+                            {!n.read && <div className="h-2 w-2 rounded-full bg-[var(--app-primary)] animate-pulse" />}
                           </div>
                         </div>
 
-                        <div className="flex items-center justify-between mt-3">
-                          <p className="text-xs font-medium text-muted/70">
-                            {formatNotificationDate(n.createdAt)}
-                          </p>
-                          {!n.read && (
-                            <div className="h-2 w-2 rounded-full bg-[var(--app-primary)] animate-pulse" />
-                          )}
-                        </div>
+                        <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-transparent via-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
                       </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
 
-                      <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-transparent via-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
-                    </div>
-                  )
-                })}
+            {/* Footer with mark all as read */}
+            {notifications.length > 0 && (
+              <div className="px-6 py-3 border-t border-white/20 bg-gradient-to-r from-[color-mix(in_oklab(var(--app-surface),90%,transparent))] to-[color-mix(in_oklab(var(--app-surface),85%,transparent))] backdrop-blur-2xl">
+                <button
+                  onClick={markAllAsRead}
+                  disabled={markingAll || unreadNotifications === 0}
+                  className="w-full flex items-center justify-center gap-2 py-2 px-4 rounded-xl bg-gradient-to-r from-[var(--app-primary)]/10 to-[var(--app-primary)]/20 hover:from-[var(--app-primary)]/20 hover:to-[var(--app-primary)]/30 text-sm font-semibold text-[var(--app-primary)] transition-all duration-200 hover:scale-105 border border-[var(--app-primary)]/20 disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  <span>{copy.markAllRead}</span>
+                </button>
               </div>
             )}
           </div>
-
-          {/* Footer with mark all as read */}
-          {notifications.length > 0 && (
-            <div className="px-6 py-3 border-t border-white/20 bg-gradient-to-r from-[color-mix(in_oklab(var(--app-surface),90%,transparent))] to-[color-mix(in_oklab(var(--app-surface),85%,transparent))] backdrop-blur-2xl">
-              <button
-                onClick={markAllAsRead}
-                disabled={markingAll || unreadNotifications === 0}
-                className="w-full flex items-center justify-center gap-2 py-2 px-4 rounded-xl bg-gradient-to-r from-[var(--app-primary)]/10 to-[var(--app-primary)]/20 hover:from-[var(--app-primary)]/20 hover:to-[var(--app-primary)]/30 text-sm font-semibold text-[var(--app-primary)] transition-all duration-200 hover:scale-105 border border-[var(--app-primary)]/20 disabled:opacity-60 disabled:cursor-not-allowed"
-              >
-                <span>{language === 'ar' ? 'تعيين الكل كمقروء' : 'Mark all as read'}</span>
-              </button>
-            </div>
-          )}
-        </div>
-      )}
-    </div>
+        )}
+      </div>
     </>
   )
 }
-
-
-
-
-
-
-
