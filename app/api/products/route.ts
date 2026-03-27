@@ -1,4 +1,4 @@
-﻿import { NotificationType, ProductStatus } from '@/lib/prisma-enums'
+import { NotificationType, ProductStatus } from '@/lib/prisma-enums'
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getSessionUser } from '@/lib/session'
@@ -27,7 +27,7 @@ async function resolveCategoryId(categoryId?: string) {
   const created = await prisma.category.create({
     data: {
       name: 'General',
-      nameAr: 'عام',
+      nameAr: '���',
       nameEn: 'General',
       slug: defaultSlug,
       description: 'Default category for supplier products',
@@ -152,7 +152,8 @@ export async function GET(request: Request) {
   }
 }
 
-import formidable from 'formidable'
+import formidable, { type Fields, type Files, type File } from 'formidable'
+import type { IncomingMessage } from 'http'
 import { uploadImageBuffer } from '@/lib/cloudinary'
 
 export async function POST(request: Request) {
@@ -176,13 +177,13 @@ export async function POST(request: Request) {
         maxFileSize: 10 * 1024 * 1024, // 10MB
       })
 
-      const [fields, files] = await form.parse(request as any)
+      const [fields, files] = (await form.parse(request as unknown as IncomingMessage)) as [Fields, Files]
 
-      const images = [] as string[]
+      const images: string[] = []
       if (files.images) {
-        const imageFiles = Array.isArray(files.images) ? files.images : [files.images]
+        const imageFiles: File[] = Array.isArray(files.images) ? files.images : [files.images]
         const fs = await import('fs/promises')
-        for (const file of imageFiles as any[]) {
+        for (const file of imageFiles) {
           if (file.filepath) {
             const buffer = await fs.readFile(file.filepath)
             const url = await uploadImageBuffer(buffer, undefined, 'trade/products')
@@ -245,10 +246,10 @@ export async function POST(request: Request) {
         const language = getRequestLanguage(request)
         await notifyAdmins({
           type: NotificationType.SYSTEM,
-          title: i18nText(language, 'تم إنشاء منتج جديد', 'New product created'),
+          title: i18nText(language, '�� ����� ���� ����', 'New product created'),
           message: i18nText(
             language,
-            `أنشأ المورد ${user.name} المنتج ${created.name} (رقم: ${created.id}).`,
+            `���� ������ ${user.name} ������ ${created.name} (���: ${created.id}).`,
             `Supplier ${user.name} created product ${created.name} (id: ${created.id}).`,
           ),
           data: {
@@ -321,6 +322,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: false, error: 'Failed to create product' }, { status: 500 })
   }
 }
+
 
 
 

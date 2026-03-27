@@ -24,6 +24,21 @@ export async function GET(request: Request) {
       nameEn: string | null
     }
 
+    type SearchItem = {
+      id: string
+      type: 'product' | 'supplier' | 'trader'
+      title: string
+      description: string
+      url: string
+      score: number
+      price?: number
+      image?: string
+      supplier?: SupplierSummary | null
+      category?: CategorySummary | null
+      rating?: number
+      productCount?: number
+    }
+
     if (!query || query.length < 2) {
       return NextResponse.json({ success: true, data: [], query, total: 0 })
     }
@@ -31,7 +46,7 @@ export async function GET(request: Request) {
     const qLower = query.toLowerCase()
 
     // Deduplication maps
-    const uniqueItems: Map<string, any> = new Map()
+    const uniqueItems: Map<string, SearchItem> = new Map()
 
     if (type === 'products' || type === 'all') {
       const products = await prisma.product.findMany({
@@ -231,4 +246,5 @@ export async function GET(request: Request) {
     return NextResponse.json({ success: false, error: 'Search failed', data: [] }, { status: 500 })
   }
 }
+
 

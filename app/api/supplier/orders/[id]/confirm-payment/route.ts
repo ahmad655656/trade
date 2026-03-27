@@ -50,7 +50,7 @@ export async function POST(request: Request, { params }: Params) {
     }
     if (!order.payment) {
       return NextResponse.json(
-        { success: false, error: i18nText(language, 'áÇ ÊæÌÏ ÚãáíÉ ÏİÚ ãÑÊÈØÉ ÈÇáØáÈ', 'Payment record is missing') },
+        { success: false, error: i18nText(language, 'ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½', 'Payment record is missing') },
         { status: 400 },
       )
     }

@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
@@ -51,6 +51,12 @@ type ConversationSummary = {
   unreadCount?: number | null
 }
 
+type ApiResponse<T> = {
+  success: boolean
+  data?: T
+  error?: string
+}
+
 export default function Navbar() {
   const { language, setLanguage, theme, toggleTheme, t } = useUi()
   const pathname = usePathname()
@@ -73,7 +79,7 @@ export default function Navbar() {
   const [searchOpen, setSearchOpen] = useState(false)
   const [searchLoading, setSearchLoading] = useState(false)
 
-  const searchRef = useRef<HTMLDivElement>(null)
+  const searchRef = useRef<HTMLDivElement | null>(null)
 
   // Prevent hydration text mismatch for UI-dependent labels/icons
   const [mounted, setMounted] = useState(false)
@@ -82,17 +88,17 @@ export default function Navbar() {
   }, [])
 
   const navLinks = [
-    { href: '/products', label: t('nav.products') || 'المنتجات' },
-    { href: '/suppliers', label: t('nav.suppliers') || 'الموردون' },
-    { href: '/about', label: t('nav.about') || 'عن المنصة' }
+    { href: '/products', label: t('nav.products') || '��������' },
+    { href: '/suppliers', label: t('nav.suppliers') || '��������' },
+    { href: '/about', label: t('nav.about') || '�� ������' }
   ]
 
   // Load current user
   useEffect(() => {
     let mounted = true
     async function loadUser() {
-      const data = await fetchJson('/api/auth/me', { cache: 'no-store' })
-      if (mounted && data?.success) {
+      const data = await fetchJson<User>('/api/auth/me', { cache: 'no-store' })
+      if (mounted && data?.success && data.data) {
         setUser(data.data)
       }
       if (mounted) setLoading(false)
@@ -111,7 +117,7 @@ export default function Navbar() {
     if (!user) return
     let mounted = true
     const load = async () => {
-      const data = await fetchJson('/api/notifications', { cache: 'no-store' })
+      const data = await fetchJson<Notification[]>('/api/notifications', { cache: 'no-store' })
       if (mounted && data?.success && Array.isArray(data.data)) {
         const fetchedNotifications = data.data as Notification[]
 
@@ -147,11 +153,11 @@ export default function Navbar() {
     if (!user) return
     let mounted = true
     const load = async () => {
-      const data = await fetchJson('/api/messages/conversations', { cache: 'no-store' })
-      const count = (data?.data as ConversationSummary[] | undefined)?.reduce(
+      const data = await fetchJson<ConversationSummary[]>('/api/messages/conversations', { cache: 'no-store' })
+      const count = (data?.data ?? []).reduce(
         (sum, item) => sum + (item.unreadCount ?? 0),
         0
-      ) ?? 0
+      )
       if (mounted) setMessageUnread(count)
     }
     load()
@@ -212,12 +218,12 @@ export default function Navbar() {
     }
   }, [openNotifications, language])
 
-  async function fetchJson(url: string, init?: RequestInit): Promise<any | null> {
+  async function fetchJson<T>(url: string, init?: RequestInit): Promise<ApiResponse<T> | null> {
     try {
       const res = await fetch(url, init)
       const ct = res.headers.get('content-type') || ''
       if (!res.ok || !ct.includes('application/json')) return null
-      return await res.json()
+      return (await res.json()) as ApiResponse<T>
     } catch {
       return null
     }
@@ -232,8 +238,8 @@ export default function Navbar() {
     trackPopularSearches(value)
     setSearchLoading(true)
     try {
-      const data = await fetchJson(`/api/search/data?q=${encodeURIComponent(value)}&limit=10&type=all`)
-      if (data?.success) setResults(data.data)
+      const data = await fetchJson<SearchableItem[]>(`/api/search/data?q=${encodeURIComponent(value)}&limit=10&type=all`)
+      if (data?.success) setResults(data.data ?? [])
       else setResults([])
     } catch {
       setResults([])
@@ -258,7 +264,7 @@ export default function Navbar() {
     setNotifications((items) => items.map((item) => ({ ...item, read: true })))
 
     try {
-      const data = await fetchJson('/api/notifications/read-all', { method: 'PATCH' })
+      const data = await fetchJson<null>('/api/notifications/read-all', { method: 'PATCH' })
       if (!data?.success) {
         throw new Error('Failed to mark all')
       }
@@ -279,9 +285,9 @@ export default function Navbar() {
   const unreadNotifications = notifications.filter(n => !n.read).length
 
   const roleLabels: Record<Role, { en: string; ar: string }> = {
-    ADMIN: { en: 'Admin', ar: 'مدير' },
-    SUPPLIER: { en: 'Supplier', ar: 'مورد' },
-    TRADER: { en: 'Trader', ar: 'تاجر' },
+    ADMIN: { en: 'Admin', ar: '����' },
+    SUPPLIER: { en: 'Supplier', ar: '����' },
+    TRADER: { en: 'Trader', ar: '����' },
   }
 
   const roleLabel = useMemo(() => {
@@ -344,12 +350,12 @@ export default function Navbar() {
           {/* Right: search + user info (always visible, no dropdown) */}
           <div className="flex items-center gap-3 lg:gap-5 min-w-0">
             {/* Search */}
-            <div ref={searchRef as any} className="relative hidden sm:block w-56 lg:w-80">
+            <div ref={searchRef} className="relative hidden sm:block w-56 lg:w-80">
               <input
                 value={query}
                 onChange={(e) => search(e.target.value)}
                 onFocus={() => setSearchOpen(true)}
-                placeholder={language === 'ar' ? 'ابحث في المنتجات، الموردين، التجار والصفقات...' : 'Search products, suppliers, traders & deals...'}
+                placeholder={language === 'ar' ? '���� �� �������ʡ �������� ������ ��������...' : 'Search products, suppliers, traders & deals...'}
                 className="w-full rounded-2xl border border-white/10 bg-[color-mix(in_oklab(var(--app-surface),92%,transparent))] px-4 py-2.5 pr-10 text-sm placeholder:text-muted/70 focus:border-[var(--app-primary)]/50 focus:ring-2 focus:ring-[var(--app-primary)]/20 transition-all duration-300"
                 role="combobox"
                 aria-expanded={searchOpen}
@@ -373,7 +379,7 @@ export default function Navbar() {
                   query={query}
                   results={results}
                   onClose={() => setSearchOpen(false)}
-                  anchorRef={searchRef as any}
+                  anchorRef={searchRef}
                   onQueryChange={search}
                   loading={searchLoading}
                 />
@@ -393,7 +399,7 @@ export default function Navbar() {
               </div>
               <div className="min-w-0">
                 <p className="truncate text-sm font-bold text-app max-w-[160px] lg:max-w-[220px]">
-                  {loading ? (language === 'ar' ? '...' : '...') : (user?.name || (language === 'ar' ? 'ضيف' : 'Guest'))}
+                  {loading ? (language === 'ar' ? '...' : '...') : (user?.name || (language === 'ar' ? '���' : 'Guest'))}
                 </p>
                 <div className="mt-0.5 inline-flex items-center gap-2">
                   <span className="px-2 py-[2px] text-[11px] font-bold rounded-full bg-gradient-to-r from-emerald-500/20 to-purple-500/20 text-emerald-700 border border-emerald-200/50">
@@ -405,7 +411,7 @@ export default function Navbar() {
                       className="inline-flex items-center gap-1 text-[11px] font-semibold text-muted hover:text-app hover:bg-white/10 rounded-lg px-2 py-1 transition-colors"
                     >
                       <Squares2X2Icon className="h-4 w-4" />
-                      {language === 'ar' ? 'لوحة التحكم' : 'Dashboard'}
+                      {language === 'ar' ? '���� ������' : 'Dashboard'}
                     </Link>
                   )}
                   {user && (
@@ -414,7 +420,7 @@ export default function Navbar() {
                       className="inline-flex items-center gap-1 text-[11px] font-semibold text-muted hover:text-red-600 hover:bg-red-50/50 rounded-lg px-2 py-1 transition-colors"
                     >
                       <ArrowRightOnRectangleIcon className="h-4 w-4" />
-                      {language === 'ar' ? 'تسجيل الخروج' : 'Logout'}
+                      {language === 'ar' ? '����� ������' : 'Logout'}
                     </button>
                   )}
                 </div>
@@ -438,7 +444,7 @@ export default function Navbar() {
             aria-expanded={openNotifications}
           >
             <BellIcon className="h-5 w-5" />
-            <span>{language === 'ar' ? 'الإشعارات' : 'Notifications'}</span>
+            <span>{language === 'ar' ? '���������' : 'Notifications'}</span>
             {unreadNotifications > 0 && (
               <span className="absolute -top-1 -right-1 inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-red-500 text-[11px] font-bold text-white px-1 shadow">
                 {unreadNotifications}
@@ -449,7 +455,7 @@ export default function Navbar() {
             href="/messages"
             className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm font-semibold hover:bg-white/10 transition-all"
           >
-            <span>{language === 'ar' ? 'الرسائل' : 'Messages'}</span>
+            <span>{language === 'ar' ? '�������' : 'Messages'}</span>
             {messageUnread > 0 && (
               <span className="ml-1 inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-blue-500 text-[11px] font-bold text-white px-1">
                 {messageUnread}
@@ -475,7 +481,7 @@ export default function Navbar() {
             className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 transition-all"
             aria-label="Toggle theme"
           >
-            <span suppressHydrationWarning aria-hidden="true">{mounted ? (theme === 'dark' ? '☀️' : '🌙') : '◐'}</span>
+            <span suppressHydrationWarning aria-hidden="true">{mounted ? (theme === 'dark' ? '??' : '??') : '?'}</span>
           </button>
         </div>
       </div>
@@ -492,13 +498,13 @@ export default function Navbar() {
               <BellIcon className="h-6 w-6 text-white" />
             </div>
             <div className="flex-1">
-              <h3 className="font-bold text-lg text-app">{language === 'ar' ? 'الإشعارات' : 'Notifications'}</h3>
-              <p className="text-xs text-muted/70">{language === 'ar' ? 'ابقَ على اطّلاع بآخر المستجدات' : 'Stay updated with latest events'}</p>
+              <h3 className="font-bold text-lg text-app">{language === 'ar' ? '���������' : 'Notifications'}</h3>
+              <p className="text-xs text-muted/70">{language === 'ar' ? '���� ��� ������ ���� ���������' : 'Stay updated with latest events'}</p>
             </div>
             <button
               onClick={() => setOpenNotifications(false)}
               className="flex h-8 w-8 items-center justify-center rounded-xl text-muted hover:bg-white/10 hover:text-app transition-all duration-200 hover:scale-105"
-              aria-label={language === 'ar' ? 'إغلاق' : 'Close'}
+              aria-label={language === 'ar' ? '�����' : 'Close'}
             >
               <XMarkIcon className="h-5 w-5" />
             </button>
@@ -509,23 +515,23 @@ export default function Navbar() {
                 <div className="h-16 w-16 rounded-3xl bg-gradient-to-br from-blue-500/20 to-purple-500/20 p-4 mb-4 flex items-center justify-center">
                   <BellIcon className="h-8 w-8 text-muted/40" />
                 </div>
-                <p className="text-base font-semibold text-muted mb-2">{language === 'ar' ? 'لا توجد إشعارات حالياً' : 'No notifications yet'}</p>
-                <p className="text-sm text-muted/60">{language === 'ar' ? 'سنخبرك عند وجود جديد' : 'We\'ll notify you when something new happens'}</p>
+                <p className="text-base font-semibold text-muted mb-2">{language === 'ar' ? '�� ���� ������� ������' : 'No notifications yet'}</p>
+                <p className="text-sm text-muted/60">{language === 'ar' ? '������ ��� ���� ����' : 'We\'ll notify you when something new happens'}</p>
               </div>
             ) : (
               <div className="p-3 space-y-2">
                 {notifications.map((n) => {
                   const isRegistration = n.data?.kind === 'REGISTRATION_PENDING'
                   const displayTitle = isRegistration
-                    ? (language === 'ar' ? 'طلب تسجيل جديد بانتظار المراجعة' : 'New registration pending approval')
+                    ? (language === 'ar' ? '��� ����� ���� ������� ��������' : 'New registration pending approval')
                     : n.title
                   const detailItems = isRegistration
                     ? [
-                        { label: language === 'ar' ? 'الاسم' : 'Name', value: n.data?.name },
-                        { label: language === 'ar' ? 'الدور' : 'Role', value: formatRoleLabel(n.data?.role, n.data?.roleLabel) },
-                        { label: language === 'ar' ? 'البريد الإلكتروني' : 'Email', value: n.data?.email },
-                        { label: language === 'ar' ? 'الهاتف' : 'Phone', value: n.data?.phone },
-                        { label: language === 'ar' ? 'الشركة' : 'Company', value: n.data?.companyName },
+                        { label: language === 'ar' ? '�����' : 'Name', value: n.data?.name },
+                        { label: language === 'ar' ? '�����' : 'Role', value: formatRoleLabel(n.data?.role, n.data?.roleLabel) },
+                        { label: language === 'ar' ? '������ ����������' : 'Email', value: n.data?.email },
+                        { label: language === 'ar' ? '������' : 'Phone', value: n.data?.phone },
+                        { label: language === 'ar' ? '������' : 'Company', value: n.data?.companyName },
                       ]
                     : []
 
@@ -605,7 +611,7 @@ export default function Navbar() {
                 disabled={markingAll || unreadNotifications === 0}
                 className="w-full flex items-center justify-center gap-2 py-2 px-4 rounded-xl bg-gradient-to-r from-[var(--app-primary)]/10 to-[var(--app-primary)]/20 hover:from-[var(--app-primary)]/20 hover:to-[var(--app-primary)]/30 text-sm font-semibold text-[var(--app-primary)] transition-all duration-200 hover:scale-105 border border-[var(--app-primary)]/20 disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                <span>{language === 'ar' ? 'تحديد الكل كمقروء' : 'Mark all as read'}</span>
+                <span>{language === 'ar' ? '����� ���� ������' : 'Mark all as read'}</span>
               </button>
             </div>
           )}
@@ -615,4 +621,10 @@ export default function Navbar() {
     </>
   )
 }
+
+
+
+
+
+
 

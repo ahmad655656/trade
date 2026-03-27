@@ -1,4 +1,4 @@
-/* eslint-disable no-console */
+/* eslint-disable @typescript-eslint/no-require-imports */
 const fs = require('fs')
 const path = require('path')
 const bcrypt = require('bcryptjs')
@@ -118,3 +118,4 @@ main().catch((error) => {
   console.error('Failed to create admin:', error)
   process.exit(1)
 })
+
