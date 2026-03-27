@@ -30,7 +30,7 @@ export async function PATCH(request: Request, { params }: Params) {
     const language = getRequestLanguage(request)
     const user = await getSessionUser()
     if (!user || user.role !== Role.ADMIN) {
-      return NextResponse.json({ success: false, error: i18nText(language, 'ط؛ظٹط± ظ…طµط±ط­', 'Unauthorized') }, { status: 401 })
+      return NextResponse.json({ success: false, error: i18nText(language, 'غير مصرح', 'Unauthorized') }, { status: 401 })
     }
 
     const { id } = await params
@@ -52,7 +52,7 @@ export async function PATCH(request: Request, { params }: Params) {
     })
 
     if (!order) {
-      return NextResponse.json({ success: false, error: i18nText(language, 'ط§ظ„ط·ظ„ط¨ ط؛ظٹط± ظ…ظˆط¬ظˆط¯', 'Order not found') }, { status: 404 })
+      return NextResponse.json({ success: false, error: i18nText(language, 'الطلب غير موجود', 'Order not found') }, { status: 404 })
     }
 
     if (order.paymentStatus !== 'PAID' || order.status !== 'WAITING_FOR_ADMIN_REVIEW') {

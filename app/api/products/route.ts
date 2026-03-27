@@ -27,7 +27,7 @@ async function resolveCategoryId(categoryId?: string) {
   const created = await prisma.category.create({
     data: {
       name: 'General',
-      nameAr: '���',
+      nameAr: 'عام',
       nameEn: 'General',
       slug: defaultSlug,
       description: 'Default category for supplier products',
@@ -246,10 +246,10 @@ export async function POST(request: Request) {
         const language = getRequestLanguage(request)
         await notifyAdmins({
           type: NotificationType.SYSTEM,
-          title: i18nText(language, '�� ����� ���� ����', 'New product created'),
+          title: i18nText(language, 'تم إنشاء منتج جديد', 'New product created'),
           message: i18nText(
             language,
-            `���� ������ ${user.name} ������ ${created.name} (���: ${created.id}).`,
+            `قام المورد ${user.name} بإنشاء المنتج ${created.name} (المعرف: ${created.id}).`,
             `Supplier ${user.name} created product ${created.name} (id: ${created.id}).`,
           ),
           data: {

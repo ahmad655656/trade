@@ -4,17 +4,17 @@ import { requireRole } from '@/lib/session'
 import { redirect } from 'next/navigation'
 
 const traderLinks = [
-  { href: '/trader', label: { ar: '���� ������', en: 'Trader Dashboard' } },
-  { href: '/trader/products', label: { ar: '��������', en: 'Products' } },
-  { href: '/trader/cart', label: { ar: '��� ������', en: 'Cart' } },
-  { href: '/trader/orders', label: { ar: '������', en: 'My Orders' } },
-  { href: '/trader/wishlist', label: { ar: '�������', en: 'Wishlist' } },
-  { href: '/trader/suppliers', label: { ar: '��������', en: 'Suppliers' } },
-  { href: '/trader/wallet', label: { ar: '�������', en: 'Wallet' } },
-  { href: '/trader/addresses', label: { ar: '��������', en: 'Addresses' } },
-  { href: '/trader/profile', label: { ar: '����� ������', en: 'Profile' } },
-  { href: '/trader/reviews', label: { ar: '��������', en: 'My Reviews' } },
-  { href: '/messages', label: { ar: '���� �������', en: 'Message center' } },
+  { href: '/trader', label: { ar: 'لوحة التاجر', en: 'Trader Dashboard' } },
+  { href: '/trader/products', label: { ar: 'المنتجات', en: 'Products' } },
+  { href: '/trader/cart', label: { ar: 'سلة المشتريات', en: 'Cart' } },
+  { href: '/trader/orders', label: { ar: 'طلباتي', en: 'My Orders' } },
+  { href: '/trader/wishlist', label: { ar: 'قائمة الرغبات', en: 'Wishlist' } },
+  { href: '/trader/suppliers', label: { ar: 'الموردون', en: 'Suppliers' } },
+  { href: '/trader/wallet', label: { ar: 'المحفظة', en: 'Wallet' } },
+  { href: '/trader/addresses', label: { ar: 'العناوين', en: 'Addresses' } },
+  { href: '/trader/profile', label: { ar: 'الملف الشخصي', en: 'Profile' } },
+  { href: '/trader/reviews', label: { ar: 'تقييماتي', en: 'My Reviews' } },
+  { href: '/messages', label: { ar: 'مركز الرسائل', en: 'Message center' } },
 ]
 
 export default async function TraderLayout({ children }: { children: React.ReactNode }) {
@@ -25,8 +25,8 @@ export default async function TraderLayout({ children }: { children: React.React
 
   return (
     <DashboardShell
-      title={{ ar: '����� ������', en: 'Trader Workspace' }}
-      subtitle={{ ar: '���� ����� ������ ������� ������ ������', en: 'Buy, track and manage manual-payment orders' }}
+      title={{ ar: 'مساحة عمل التاجر', en: 'Trader Workspace' }}
+      subtitle={{ ar: 'شراء وتتبع وإدارة طلبات الدفع اليدوي', en: 'Buy, track and manage manual-payment orders' }}
       links={traderLinks}
     >
       {children}

@@ -27,7 +27,7 @@ export async function POST(request: Request, { params }: Params) {
     const language = getRequestLanguage(request)
     const user = await getSessionUser()
     if (!user || user.role !== Role.TRADER || !user.trader) {
-      return NextResponse.json({ success: false, error: i18nText(language, 'ط·ط›ط¸ظ¹ط·آ± ط¸â€¦ط·آµط·آ±ط·آ­', 'Unauthorized') }, { status: 401 })
+      return NextResponse.json({ success: false, error: i18nText(language, 'غير مصرح', 'Unauthorized') }, { status: 401 })
     }
 
     const { id } = await params
@@ -46,7 +46,7 @@ export async function POST(request: Request, { params }: Params) {
     })
 
     if (!order || order.traderId !== user.trader.id) {
-      return NextResponse.json({ success: false, error: i18nText(language, 'ط·آ§ط¸â€‍ط·آ·ط¸â€‍ط·آ¨ ط·ط›ط¸ظ¹ط·آ± ط¸â€¦ط¸ث†ط·آ¬ط¸ث†ط·آ¯', 'Order not found') }, { status: 404 })
+      return NextResponse.json({ success: false, error: i18nText(language, 'الطلب غير موجود', 'Order not found') }, { status: 404 })
     }
 
     const now = new Date()
@@ -57,7 +57,7 @@ export async function POST(request: Request, { params }: Params) {
 
     if (!['AWAITING_DELIVERY_CONFIRMATION', 'DELIVERED'].includes(order.status) && !canConfirmAfterEstimatedDelivery) {
       return NextResponse.json(
-        { success: false, error: i18nText(language, 'ط¸â€‍ط·آ§ ط¸ظ¹ط¸â€¦ط¸ئ’ط¸â€  ط·ع¾ط·آ£ط¸ئ’ط¸ظ¹ط·آ¯ ط·آ§ط¸â€‍ط·آ§ط·آ³ط·ع¾ط¸â€‍ط·آ§ط¸â€¦ ط¸ظ¾ط¸ظ¹ ط·آ§ط¸â€‍ط·آ­ط·آ§ط¸â€‍ط·آ© ط·آ§ط¸â€‍ط·آ­ط·آ§ط¸â€‍ط¸ظ¹ط·آ©', 'Cannot confirm delivery for current status') },
+        { success: false, error: i18nText(language, 'لا يمكن تأكيد الاستلام في الحالة الحالية', 'Cannot confirm delivery for current status') },
         { status: 400 },
       )
     }
@@ -76,7 +76,7 @@ export async function POST(request: Request, { params }: Params) {
         status: 'DELIVERED',
         actorUserId: user.id,
         language,
-        note: i18nText(language, 'ط¸â€ڑط·آ§ط¸â€¦ ط·آ§ط¸â€‍ط·ع¾ط·آ§ط·آ¬ط·آ± ط·آ¨ط·ع¾ط·آ£ط¸ئ’ط¸ظ¹ط·آ¯ ط·آ§ط¸â€‍ط·آ§ط·آ³ط·ع¾ط¸â€‍ط·آ§ط¸â€¦', 'Merchant confirmed delivery'),
+        note: i18nText(language, 'التاجر أكد استلام البضاعة', 'Merchant confirmed delivery'),
       })
 
       const closed = await tx.order.update({
@@ -92,14 +92,14 @@ export async function POST(request: Request, { params }: Params) {
         status: 'ORDER_CLOSED',
         actorUserId: user.id,
         language,
-        note: i18nText(language, 'ط·ع¾ط¸â€¦ ط·آ¥ط·ط›ط¸â€‍ط·آ§ط¸â€ڑ ط·آ§ط¸â€‍ط·آ·ط¸â€‍ط·آ¨ ط·آ¨ط·آ¹ط·آ¯ ط·ع¾ط·آ£ط¸ئ’ط¸ظ¹ط·آ¯ ط·آ§ط¸â€‍ط·آ§ط·آ³ط·ع¾ط¸â€‍ط·آ§ط¸â€¦', 'Order closed after delivery confirmation'),
+        note: i18nText(language, 'تم إغلاق الطلب بعد تأكيد الاستلام', 'Order closed after delivery confirmation'),
       })
 
       return { delivered, closed }
     })
 
     const supplierUserIds = Array.from(new Set(order.items.map((item: SupplierItem) => item.supplier.user.id)))
-    const separator = language === 'ar' ? 'طŒ ' : ', '
+    const separator = language === 'ar' ? '، ' : ', '
     const itemSummary = (order.items as OrderItemSummary[])
       .map((item) => {
         const name = language === 'ar' ? item.product.nameAr || item.product.nameEn : item.product.nameEn || item.product.nameAr
@@ -109,7 +109,7 @@ export async function POST(request: Request, { params }: Params) {
 
     const addressSummary = order.address
       ? `${order.address.country} - ${order.address.city}${order.address.state ? ` - ${order.address.state}` : ''} | ${order.address.address}`
-      : (language === 'ar' ? 'ط؛ظٹط± ظ…ط­ط¯ط¯' : 'Not provided')
+      : (language === 'ar' ? 'غير محدد' : 'Not provided')
 
     await notifyUsers({
       userIds: supplierUserIds,
@@ -125,10 +125,10 @@ export async function POST(request: Request, { params }: Params) {
 
     await notifyAdmins({
       type: NotificationType.DELIVERY_CONFIRMED,
-      title: i18nText(language, `طھظ… طھط³ظ„ظٹظ… ط§ظ„ط·ظ„ط¨ ${order.orderNumber}`, `Order ${order.orderNumber} delivered`),
+      title: i18nText(language, `تم تسليم الطلب ${order.orderNumber}`, `Order ${order.orderNumber} delivered`),
       message: i18nText(
         language,
-        `طھظ… طھط£ظƒظٹط¯ ط§ظ„طھط³ظ„ظٹظ…. ط§ظ„طھط§ط¬ط±: ${order.trader?.user?.name || '-'}طŒ ط§ظ„ط¹ظ†ط§طµط±: ${itemSummary || '-'}. ط·ط±ظٹظ‚ط© ط§ظ„ط´ط­ظ†: ${order.shippingMethod || '-'}طŒ ط±ظ‚ظ… ط§ظ„طھطھط¨ط¹: ${order.trackingNumber || '-'}طŒ ط§ظ„ط¹ظ†ظˆط§ظ†: ${addressSummary}.`,
+        `تم تأكيد الاستلام. التاجر: ${order.trader?.user?.name || '-'}، العناصر: ${itemSummary || '-'}. طريقة الشحن: ${order.shippingMethod || '-'}، رقم التتبع: ${order.trackingNumber || '-'}، العنوان: ${addressSummary}.`,
         `Delivery confirmed. Trader: ${order.trader?.user?.name || '-'}, items: ${itemSummary || '-'}. Shipping method: ${order.shippingMethod || '-'}, tracking: ${order.trackingNumber || '-'}, address: ${addressSummary}.`,
       ),
       data: {
@@ -169,7 +169,7 @@ export async function POST(request: Request, { params }: Params) {
     return NextResponse.json({
       success: true,
       data: updated.closed,
-      message: i18nText(language, 'ط·ع¾ط¸â€¦ ط·ع¾ط·آ£ط¸ئ’ط¸ظ¹ط·آ¯ ط·آ§ط¸â€‍ط·آ§ط·آ³ط·ع¾ط¸â€‍ط·آ§ط¸â€¦ ط¸ث†ط·آ¥ط·ط›ط¸â€‍ط·آ§ط¸â€ڑ ط·آ§ط¸â€‍ط·آ·ط¸â€‍ط·آ¨', 'Delivery confirmed and order closed'),
+      message: i18nText(language, 'تم تأكيد الاستلام وإغلاق الطلب', 'Delivery confirmed and order closed'),
     })
   } catch (error) {
     console.error('Failed to confirm delivery:', error)

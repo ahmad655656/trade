@@ -50,7 +50,7 @@ export async function POST(request: Request, { params }: Params) {
     }
     if (!order.payment) {
       return NextResponse.json(
-        { success: false, error: i18nText(language, '�� ���� ����� ��� ������ ������', 'Payment record is missing') },
+        { success: false, error: i18nText(language, 'سجل الدفع غير موجود', 'Payment record is missing') },
         { status: 400 },
       )
     }
@@ -68,7 +68,7 @@ export async function POST(request: Request, { params }: Params) {
           success: false, 
           error: i18nText(
             language, 
-            'لا يمكن تأكيد استلام المال الا بعد تأكيد التاجر استلام البضاعة', 
+            'لا يمكن تأكيد استلام المال إلا بعد تأكيد التاجر استلام البضاعة', 
             'Can only confirm payment after trader confirms delivery receipt'
           ) 
         }, 
