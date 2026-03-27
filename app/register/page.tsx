@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { useEffect, useMemo, useState } from 'react'
+import { Suspense, useEffect, useMemo, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -13,6 +13,29 @@ import { useUi } from '@/components/providers/UiProvider'
 type FormValues = z.infer<typeof registerSchema>
 
 export default function RegisterPage() {
+  return (
+    <Suspense fallback={<RegisterFallback />}>
+      <RegisterForm />
+    </Suspense>
+  )
+}
+
+function RegisterFallback() {
+  return (
+    <div className="card-pro mx-auto max-w-xl p-8">
+      <div className="h-6 w-40 rounded-lg bg-white/10 animate-pulse" />
+      <div className="mt-3 h-4 w-64 rounded-lg bg-white/10 animate-pulse" />
+      <div className="mt-6 grid gap-4 md:grid-cols-2">
+        {Array.from({ length: 8 }).map((_, idx) => (
+          <div key={idx} className="h-10 rounded-xl bg-white/10 animate-pulse" />
+        ))}
+      </div>
+      <div className="mt-5 h-10 rounded-xl bg-white/10 animate-pulse" />
+    </div>
+  )
+}
+
+function RegisterForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { t, language } = useUi()
@@ -71,12 +94,12 @@ export default function RegisterPage() {
 
       toast.success(
         language === 'ar'
-          ? 'تم إرسال طلب التسجيل. سيصلك بريد عند الموافقة.'
+          ? '�� ����� ��� �������. ����� ���� ��� ��������.'
           : 'Registration submitted. You will receive an email once approved.',
       )
       router.push('/login')
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : language === 'ar' ? 'فشل' : 'Failed')
+      toast.error(error instanceof Error ? error.message : language === 'ar' ? '���' : 'Failed')
     } finally {
       setIsLoading(false)
     }
@@ -89,51 +112,51 @@ export default function RegisterPage() {
 
       <form className="mt-6 grid gap-4 md:grid-cols-2" onSubmit={handleSubmit(onSubmit)}>
         <div className="md:col-span-2">
-          <label className="block text-sm font-medium text-app">نوع الحساب</label>
+          <label className="block text-sm font-medium text-app">��� ������</label>
           <select {...register('role')} className="input-pro mt-1">
-            <option value="TRADER">تاجر</option>
-            <option value="SUPPLIER">مورد</option>
+            <option value="TRADER">����</option>
+            <option value="SUPPLIER">����</option>
           </select>
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-app">الاسم الكامل</label>
+          <label className="block text-sm font-medium text-app">����� ������</label>
           <input {...register('name')} className="input-pro mt-1" />
           {errors.name && <p className="mt-1 text-sm text-red-500">{errors.name.message}</p>}
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-app">رقم الهاتف (إلزامي للتحقق)</label>
+          <label className="block text-sm font-medium text-app">��� ������ (������ ������)</label>
           <input {...register('phone')} className="input-pro mt-1" dir="ltr" />
           {errors.phone && <p className="mt-1 text-sm text-red-500">{errors.phone.message}</p>}
         </div>
 
         <div className="md:col-span-2">
-          <label className="block text-sm font-medium text-app">البريد الإلكتروني</label>
+          <label className="block text-sm font-medium text-app">������ ����������</label>
           <input {...register('email')} type="email" className="input-pro mt-1" dir="ltr" />
           {errors.email && <p className="mt-1 text-sm text-red-500">{errors.email.message}</p>}
         </div>
 
         <div className="md:col-span-2">
-          <label className="block text-sm font-medium text-app">اسم الشركة / المتجر (إلزامي للتحقق)</label>
+          <label className="block text-sm font-medium text-app">��� ������ / ������ (������ ������)</label>
           <input {...register('companyName')} className="input-pro mt-1" />
           {errors.companyName && <p className="mt-1 text-sm text-red-500">{errors.companyName.message}</p>}
         </div>
 
         <div className="md:col-span-2">
-          <label className="block text-sm font-medium text-app">السجل التجاري / الرقم الضريبي (إلزامي)</label>
+          <label className="block text-sm font-medium text-app">����� ������� / ����� ������� (������)</label>
           <input {...register('commercialRegister')} className="input-pro mt-1" />
           {errors.commercialRegister && <p className="mt-1 text-sm text-red-500">{errors.commercialRegister.message}</p>}
         </div>
 
         <div className="md:col-span-2">
-          <label className="block text-sm font-medium text-app">رقم السجل الضريبي (إلزامي)</label>
+          <label className="block text-sm font-medium text-app">��� ����� ������� (������)</label>
           <input {...register('taxNumber')} className="input-pro mt-1" dir="ltr" />
           {errors.taxNumber && <p className="mt-1 text-sm text-red-500">{errors.taxNumber.message}</p>}
         </div>
 
         <div className="md:col-span-2">
-          <label className="block text-sm font-medium text-app">صورة الهوية / السجل التجاري (إلزامي للموافقة)</label>
+          <label className="block text-sm font-medium text-app">���� ������ / ����� ������� (������ ��������)</label>
           <input type="file" accept="image/*,.pdf" className="input-pro mt-1 file-input" />
           {/* File validation handled server-side */}
         </div>
@@ -141,19 +164,19 @@ export default function RegisterPage() {
         <div className="md:col-span-2">
           <label className="flex items-center gap-2">
             <input type="checkbox" {...register('termsAccepted')} />
-            أوافق على شروط الخدمة والخصوصية، وأفهم أن الحساب يتطلب موافقة التحقق
+            ����� ��� ���� ������ ��������ɡ ����� �� ������ ����� ������ ������
           </label>
           {errors.termsAccepted && <p className="mt-1 text-sm text-red-500">{errors.termsAccepted.message}</p>}
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-app">كلمة المرور</label>
+          <label className="block text-sm font-medium text-app">���� ������</label>
           <input {...register('password')} type="password" className="input-pro mt-1" dir="ltr" />
           {errors.password && <p className="mt-1 text-sm text-red-500">{errors.password.message}</p>}
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-app">تأكيد كلمة المرور</label>
+          <label className="block text-sm font-medium text-app">����� ���� ������</label>
           <input {...register('confirmPassword')} type="password" className="input-pro mt-1" dir="ltr" />
           {errors.confirmPassword && <p className="mt-1 text-sm text-red-500">{errors.confirmPassword.message}</p>}
         </div>
