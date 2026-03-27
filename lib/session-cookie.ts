@@ -1,5 +1,17 @@
 import { randomBytes } from 'crypto'
 import { cookies } from 'next/headers'
+import type { NextResponse } from 'next/server'
+
+type CookieSetter = {
+  set: (name: string, value: string, options: {
+    httpOnly?: boolean
+    secure?: boolean
+    sameSite?: 'lax' | 'strict' | 'none'
+    maxAge?: number
+    expires?: Date
+    path?: string
+  }) => void
+}
 
 export async function setAuthCookies(token: string) {
   const cookieStore = await cookies()
@@ -20,8 +32,9 @@ export async function setAuthCookies(token: string) {
   })
 }
 
-export async function clearAuthCookies() {
-  const cookieStore = await cookies()
+export async function clearAuthCookies(response?: NextResponse) {
+  const cookieStore: CookieSetter = response ? response.cookies : await cookies()
+
   cookieStore.set('token', '', {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
@@ -37,4 +50,3 @@ export async function clearAuthCookies() {
     path: '/',
   })
 }
-

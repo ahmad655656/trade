@@ -290,7 +290,8 @@ export default function Navbar() {
   }
 
   async function logout() {
-    await fetch('/api/auth/logout', { method: 'POST' })
+    await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' })
+    setUser(null)
     router.push('/login')
     router.refresh()
   }
@@ -677,3 +678,6 @@ export default function Navbar() {
     </>
   )
 }
+
+
+

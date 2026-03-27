@@ -25,7 +25,6 @@ export default function RegisterPage() {
 
   const {
     register,
-    watch,
     handleSubmit,
     setValue,
     formState: { errors },
@@ -40,8 +39,6 @@ export default function RegisterPage() {
   useEffect(() => {
     setValue('role', initialRole)
   }, [initialRole, setValue])
-
-  const selectedRole = watch('role')
 
   const onSubmit = async (payload: FormValues) => {
     const requestBody: FormValues = {
@@ -74,12 +71,12 @@ export default function RegisterPage() {
 
       toast.success(
         language === 'ar'
-          ? 'طھظ… ط¥ط±ط³ط§ظ„ ط·ظ„ط¨ ط§ظ„طھط³ط¬ظٹظ„. ط³ظٹطµظ„ظƒ ط¨ط±ظٹط¯ ط¹ظ†ط¯ ط§ظ„ظ…ظˆط§ظپظ‚ط©.'
+          ? 'تم إرسال طلب التسجيل. سيصلك بريد عند الموافقة.'
           : 'Registration submitted. You will receive an email once approved.',
       )
       router.push('/login')
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : language === 'ar' ? 'ظپط´ظ„' : 'Failed')
+      toast.error(error instanceof Error ? error.message : language === 'ar' ? 'فشل' : 'Failed')
     } finally {
       setIsLoading(false)
     }
@@ -92,51 +89,51 @@ export default function RegisterPage() {
 
       <form className="mt-6 grid gap-4 md:grid-cols-2" onSubmit={handleSubmit(onSubmit)}>
         <div className="md:col-span-2">
-          <label className="block text-sm font-medium text-app">ظ†ظˆط¹ ط§ظ„ط­ط³ط§ط¨</label>
+          <label className="block text-sm font-medium text-app">نوع الحساب</label>
           <select {...register('role')} className="input-pro mt-1">
-            <option value="TRADER">طھط§ط¬ط±</option>
-            <option value="SUPPLIER">ظ…ظˆط±ط¯</option>
+            <option value="TRADER">تاجر</option>
+            <option value="SUPPLIER">مورد</option>
           </select>
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-app">ط§ظ„ط§ط³ظ… ط§ظ„ظƒط§ظ…ظ„</label>
+          <label className="block text-sm font-medium text-app">الاسم الكامل</label>
           <input {...register('name')} className="input-pro mt-1" />
           {errors.name && <p className="mt-1 text-sm text-red-500">{errors.name.message}</p>}
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-app">ط±ظ‚ظ… ط§ظ„ظ‡ط§طھظپ (ط¥ظ„ط²ط§ظ…ظٹ ظ„ظ„طھط­ظ‚ظ‚)</label>
+          <label className="block text-sm font-medium text-app">رقم الهاتف (إلزامي للتحقق)</label>
           <input {...register('phone')} className="input-pro mt-1" dir="ltr" />
           {errors.phone && <p className="mt-1 text-sm text-red-500">{errors.phone.message}</p>}
         </div>
 
         <div className="md:col-span-2">
-          <label className="block text-sm font-medium text-app">ط§ظ„ط¨ط±ظٹط¯ ط§ظ„ط¥ظ„ظƒطھط±ظˆظ†ظٹ</label>
+          <label className="block text-sm font-medium text-app">البريد الإلكتروني</label>
           <input {...register('email')} type="email" className="input-pro mt-1" dir="ltr" />
           {errors.email && <p className="mt-1 text-sm text-red-500">{errors.email.message}</p>}
         </div>
 
         <div className="md:col-span-2">
-          <label className="block text-sm font-medium text-app">ط§ط³ظ… ط§ظ„ط´ط±ظƒط© / ط§ظ„ظ…طھط¬ط± (ط¥ظ„ط²ط§ظ…ظٹ ظ„ظ„طھط­ظ‚ظ‚)</label>
+          <label className="block text-sm font-medium text-app">اسم الشركة / المتجر (إلزامي للتحقق)</label>
           <input {...register('companyName')} className="input-pro mt-1" />
           {errors.companyName && <p className="mt-1 text-sm text-red-500">{errors.companyName.message}</p>}
         </div>
 
         <div className="md:col-span-2">
-          <label className="block text-sm font-medium text-app">ط§ظ„ط³ط¬ظ„ ط§ظ„طھط¬ط§ط±ظٹ / ط§ظ„ط±ظ‚ظ… ط§ظ„ط¶ط±ظٹط¨ظٹ (ط¥ظ„ط²ط§ظ…ظٹ)</label>
+          <label className="block text-sm font-medium text-app">السجل التجاري / الرقم الضريبي (إلزامي)</label>
           <input {...register('commercialRegister')} className="input-pro mt-1" />
           {errors.commercialRegister && <p className="mt-1 text-sm text-red-500">{errors.commercialRegister.message}</p>}
         </div>
 
         <div className="md:col-span-2">
-          <label className="block text-sm font-medium text-app">ط±ظ‚ظ… ط§ظ„ط³ط¬ظ„ ط§ظ„ط¶ط±ظٹط¨ظٹ (ط¥ظ„ط²ط§ظ…ظٹ)</label>
+          <label className="block text-sm font-medium text-app">رقم السجل الضريبي (إلزامي)</label>
           <input {...register('taxNumber')} className="input-pro mt-1" dir="ltr" />
           {errors.taxNumber && <p className="mt-1 text-sm text-red-500">{errors.taxNumber.message}</p>}
         </div>
 
         <div className="md:col-span-2">
-          <label className="block text-sm font-medium text-app">طµظˆط±ط© ط§ظ„ظ‡ظˆظٹط© / ط§ظ„ط³ط¬ظ„ ط§ظ„طھط¬ط§ط±ظٹ (ط¥ظ„ط²ط§ظ…ظٹ ظ„ظ„ظ…ظˆط§ظپظ‚ط©)</label>
+          <label className="block text-sm font-medium text-app">صورة الهوية / السجل التجاري (إلزامي للموافقة)</label>
           <input type="file" accept="image/*,.pdf" className="input-pro mt-1 file-input" />
           {/* File validation handled server-side */}
         </div>
@@ -144,19 +141,19 @@ export default function RegisterPage() {
         <div className="md:col-span-2">
           <label className="flex items-center gap-2">
             <input type="checkbox" {...register('termsAccepted')} />
-            ط£ظˆط§ظپظ‚ ط¹ظ„ظ‰ ط´ط±ظˆط· ط§ظ„ط®ط¯ظ…ط© ظˆط§ظ„ط®طµظˆطµظٹط©طŒ ظˆط£ظپظ‡ظ… ط£ظ† ط§ظ„ط­ط³ط§ط¨ ظٹطھط·ظ„ط¨ ظ…ظˆط§ظپظ‚ط© ط§ظ„طھط­ظ‚ظ‚
+            أوافق على شروط الخدمة والخصوصية، وأفهم أن الحساب يتطلب موافقة التحقق
           </label>
           {errors.termsAccepted && <p className="mt-1 text-sm text-red-500">{errors.termsAccepted.message}</p>}
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-app">ظƒظ„ظ…ط© ط§ظ„ظ…ط±ظˆط±</label>
+          <label className="block text-sm font-medium text-app">كلمة المرور</label>
           <input {...register('password')} type="password" className="input-pro mt-1" dir="ltr" />
           {errors.password && <p className="mt-1 text-sm text-red-500">{errors.password.message}</p>}
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-app">طھط£ظƒظٹط¯ ظƒظ„ظ…ط© ط§ظ„ظ…ط±ظˆط±</label>
+          <label className="block text-sm font-medium text-app">تأكيد كلمة المرور</label>
           <input {...register('confirmPassword')} type="password" className="input-pro mt-1" dir="ltr" />
           {errors.confirmPassword && <p className="mt-1 text-sm text-red-500">{errors.confirmPassword.message}</p>}
         </div>
@@ -175,4 +172,3 @@ export default function RegisterPage() {
     </div>
   )
 }
-

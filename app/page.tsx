@@ -195,6 +195,19 @@ export default function HomePage() {
     return '/trader'
   }, [userRole])
 
+  const visibleGuides = useMemo(() => {
+    if (!userRole) return roleGuides
+    if (userRole === 'TRADER') return roleGuides.filter((guide) => guide.id === 'trader')
+    if (userRole === 'SUPPLIER') return roleGuides.filter((guide) => guide.id === 'supplier')
+    return []
+  }, [userRole])
+
+  const dashboardCta = {
+    ar: 'اذهب إلى لوحة التحكم',
+    en: 'Go to dashboard',
+    href: dashboardHref,
+  }
+
   const phoneHref = `tel:${SUPPORT_PHONE.replace(/\s+/g, '')}`
 
   return (
@@ -224,9 +237,16 @@ export default function HomePage() {
                     <Link href={dashboardHref} className="btn-primary">
                       {t('nav.dashboard')}
                     </Link>
-                    <Link href="/products" className="btn-secondary">
-                      {t('nav.products')}
-                    </Link>
+                    {userRole !== 'ADMIN' && (
+                      <Link
+                        href={userRole === 'SUPPLIER' ? '/supplier/products' : '/trader/products'}
+                        className="btn-secondary"
+                      >
+                        {isArabic
+                          ? (userRole === 'SUPPLIER' ? 'منتجاتي' : 'تصفح المنتجات')
+                          : (userRole === 'SUPPLIER' ? 'My products' : 'Browse products')}
+                      </Link>
+                    )}
                   </>
                 ) : (
                   <>
@@ -255,64 +275,83 @@ export default function HomePage() {
           </div>
 
           <div className="grid gap-4">
-            {roleGuides.map((guide) => {
-              const Icon = guide.icon
-              return (
-                <div
-                  key={guide.id}
-                  className="card-pro rounded-2xl p-5 transition duration-300 hover:shadow-lg hover:shadow-[var(--app-primary)]/10"
-                >
-                  <div className="flex items-start gap-4">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[color-mix(in_oklab,var(--app-primary)_18%,transparent)] text-[var(--app-primary)]">
-                      <Icon className="h-6 w-6" />
-                    </div>
-                    <div className="space-y-1">
-                      <h3 className="text-base font-bold text-app">
-                        {isArabic ? guide.title.ar : guide.title.en}
-                      </h3>
-                      <p className="text-sm text-muted">
-                        {isArabic ? guide.description.ar : guide.description.en}
-                      </p>
+            {visibleGuides.length > 0 ? (
+              visibleGuides.map((guide) => {
+                const Icon = guide.icon
+                return (
+                  <div
+                    key={guide.id}
+                    className="card-pro rounded-2xl p-5 transition duration-300 hover:shadow-lg hover:shadow-[var(--app-primary)]/10"
+                  >
+                    <div className="flex items-start gap-4">
+                      <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[color-mix(in_oklab,var(--app-primary)_18%,transparent)] text-[var(--app-primary)]">
+                        <Icon className="h-6 w-6" />
+                      </div>
+                      <div className="space-y-1">
+                        <h3 className="text-base font-bold text-app">
+                          {isArabic ? guide.title.ar : guide.title.en}
+                        </h3>
+                        <p className="text-sm text-muted">
+                          {isArabic ? guide.description.ar : guide.description.en}
+                        </p>
+                      </div>
                     </div>
                   </div>
-                </div>
-              )
-            })}
+                )
+              })
+            ) : (
+              <div className="card-pro rounded-2xl p-5">
+                <h3 className="text-base font-bold text-app">
+                  {isArabic ? 'إدارة المنصة' : 'Platform admin'}
+                </h3>
+                <p className="mt-2 text-sm text-muted">
+                  {isArabic
+                    ? 'انتقل إلى لوحة الإدارة لمتابعة المستخدمين والطلبات.'
+                    : 'Go to the admin dashboard to manage users and orders.'}
+                </p>
+                <Link href={dashboardHref} className="btn-primary mt-4 w-full">
+                  {t('nav.dashboard')}
+                </Link>
+              </div>
+            )}
           </div>
         </div>
       </section>
 
-      <section id="roles" className="grid gap-6 lg:grid-cols-2">
-        {roleGuides.map((guide) => {
-          const Icon = guide.icon
-          return (
-            <div key={guide.id} className="card-pro rounded-2xl p-6">
-              <div className="flex items-center gap-3">
-                <Icon className="h-6 w-6 text-[var(--app-primary)]" />
-                <h2 className="text-xl font-bold text-app">
-                  {isArabic ? guide.title.ar : guide.title.en}
-                </h2>
+      {visibleGuides.length > 0 && (
+        <section id="roles" className="grid gap-6 lg:grid-cols-2">
+          {visibleGuides.map((guide) => {
+            const Icon = guide.icon
+            const cta = userRole ? dashboardCta : guide.cta
+            return (
+              <div key={guide.id} className="card-pro rounded-2xl p-6">
+                <div className="flex items-center gap-3">
+                  <Icon className="h-6 w-6 text-[var(--app-primary)]" />
+                  <h2 className="text-xl font-bold text-app">
+                    {isArabic ? guide.title.ar : guide.title.en}
+                  </h2>
+                </div>
+                <p className="mt-2 text-sm text-muted">
+                  {isArabic ? guide.description.ar : guide.description.en}
+                </p>
+                <div className="mt-4 space-y-2 text-sm text-muted">
+                  {guide.steps.map((step, index) => (
+                    <div key={index} className="flex items-center gap-2">
+                      <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[var(--app-primary)]/10 text-xs font-bold text-[var(--app-primary)]">
+                        {index + 1}
+                      </span>
+                      <span>{isArabic ? step.ar : step.en}</span>
+                    </div>
+                  ))}
+                </div>
+                <Link href={cta.href} className="btn-primary mt-5 w-full">
+                  {isArabic ? cta.ar : cta.en}
+                </Link>
               </div>
-              <p className="mt-2 text-sm text-muted">
-                {isArabic ? guide.description.ar : guide.description.en}
-              </p>
-              <div className="mt-4 space-y-2 text-sm text-muted">
-                {guide.steps.map((step, index) => (
-                  <div key={index} className="flex items-center gap-2">
-                    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[var(--app-primary)]/10 text-xs font-bold text-[var(--app-primary)]">
-                      {index + 1}
-                    </span>
-                    <span>{isArabic ? step.ar : step.en}</span>
-                  </div>
-                ))}
-              </div>
-              <Link href={guide.cta.href} className="btn-primary mt-5 w-full">
-                {isArabic ? guide.cta.ar : guide.cta.en}
-              </Link>
-            </div>
-          )
-        })}
-      </section>
+            )
+          })}
+        </section>
+      )}
 
       <section className="grid gap-4 md:grid-cols-3">
         {valueCards.map((card) => {
